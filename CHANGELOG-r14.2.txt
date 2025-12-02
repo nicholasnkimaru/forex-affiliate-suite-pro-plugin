@@ -1,0 +1,38 @@
+Forex Affiliate Suite Pro — FULL r14.2
+Date: 2025-10-28
+
+- Unified Payments screen (PayPal, Stripe, Flutterwave, Paystack, M‑Pesa)
+- M‑Pesa dual-mode (Till / Paybill) with Kenyan MSISDN validation (front-end)
+- Admin hub with Getting Started, User Dashboard, Tools, Settings Backup
+- Shortcodes: [fasp_checkout], [fasp_onboarding], [fasp_user_dashboard]
+- Webhook endpoints (?fasp_webhook=mpesa|primary)
+- Version bump to r14.2
+
+
+r14.3 (2025-10-28)
+- Live Checkout wiring: Stripe Checkout Session, Flutterwave /v3/payments, Paystack initialize, M-Pesa STK Push (Daraja)
+- Added AJAX endpoints: fasp_create_checkout, fasp_mpesa_push
+- Shortcode JS now redirects to gateway or triggers STK push
+
+
+r14.4 (2025-10-28)
+- Full Daraja: STK init+query+callback storage, C2B Register/Validation/Confirmation
+- Admin Transactions + CSV export
+- Tools: Balance, Reversal, Transaction Status
+
+
+r14.5 (2025-10-28)
+- On-server SecurityCredential generation using Safaricom public cert (PEM) + Initiator Password
+- Added Initiator/Password/PEM fields to M-Pesa settings (fallback to pre-generated credential)
+- Front-end STK status widget with auto-poll until success/fail (up to 120s), shows receipt when available
+
+
+r14.6 (2025-10-28)
+- New shortcodes: [fasp_stk_status] and [fasp_receipt]
+- Admin Transactions filters: type, status, search (phone/receipt/checkout), date range + CSV respects filters
+
+
+r14.8 (2025-10-28)
+- Crypto (USDT) multi-wallet: TRC20, ERC20, BEP20 + Preferred selector
+- Copy buttons in Payments admin and Receipt view
+- Shortcode [fasp_usdt_wallet type="trc20|erc20|bep20"]

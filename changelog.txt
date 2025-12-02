@@ -1,0 +1,8 @@
+Forex Affiliate Suite PRO — r14.9 FINAL (built 2025-10-29 20:08:55)
+- Payments: Unified single renderer only. Legacy admin-payments.php/admin-payments-pro.php loaders removed.
+- Tabs kept: Payments (Unified) and Bank Transfer (Bank Details / Instructions). Crypto promoted as first-class tab.
+- Fixed PHP parse error in payments screen (unexpected elseif) and undefined helper (fasp_render_text → fasp_field_text).
+- Removed legacy raw HTML block that caused duplicate stacks on fasp_payments.
+- Menu callback harmonized to fasp_admin_payments_screen.
+- Version bumped to r14.9 in plugin header and FASP_VERSION.
+- Safe includes: ensured includes/fasp-admin-payments.php is loaded and endpoints active.
