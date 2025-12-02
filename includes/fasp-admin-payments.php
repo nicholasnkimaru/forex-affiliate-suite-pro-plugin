@@ -52,7 +52,24 @@ function fasp_pay_update($data) {
     $clean['mpesa_passkey']  = isset($data['mpesa_passkey']) ? sanitize_text_field($data['mpesa_passkey']) : '';
     $clean['mpesa_initiator']= isset($data['mpesa_initiator']) ? sanitize_text_field($data['mpesa_initiator']) : '';
     $clean['mpesa_ipass']    = isset($data['mpesa_ipass']) ? sanitize_text_field($data['mpesa_ipass']) : '';
-    $clean['mpesa_cert']     = isset($data['mpesa_cert']) ? wp_kses_post($data['mpesa_cert']) : '';
+    // M-Pesa PEM certificate: use sanitize_textarea_field to preserve PEM format
+    $mpesa_cert_raw          = isset($data['mpesa_cert']) ? sanitize_textarea_field($data['mpesa_cert']) : '';
+    $clean['mpesa_cert']     = '';
+    $clean['mpesa_cert_valid'] = 0;
+    if (!empty($mpesa_cert_raw)) {
+        // Validate PEM format: must have BEGIN and END markers
+        if (strpos($mpesa_cert_raw, '-----BEGIN') !== false && strpos($mpesa_cert_raw, '-----END') !== false) {
+            $clean['mpesa_cert'] = $mpesa_cert_raw;
+            $clean['mpesa_cert_valid'] = 1;
+        } else {
+            // Invalid PEM format - store but mark as invalid for admin notice
+            $clean['mpesa_cert'] = $mpesa_cert_raw;
+            $clean['mpesa_cert_valid'] = 0;
+            add_settings_error('fasp_payments', 'mpesa_cert_invalid', 
+                'M-Pesa Certificate appears invalid. PEM certificates must contain -----BEGIN and -----END markers.', 
+                'error');
+        }
+    }
     $env                      = isset($data['mpesa_env']) ? sanitize_text_field($data['mpesa_env']) : 'sandbox';
     $clean['mpesa_env']      = in_array($env, ['sandbox','live'], true) ? $env : 'sandbox';
 
@@ -89,6 +106,8 @@ function fasp_admin_payments_screen() {
     if (isset($_POST['fasp_payments_submit']) && check_admin_referer('fasp_payments_save','fasp_payments_nonce')) {
         $saved = fasp_pay_update( wp_unslash( $_POST['fasp'] ?? [] ) );
         echo '<div class="updated"><p>Payments settings saved.</p></div>';
+        // Display any settings errors (e.g., invalid M-Pesa cert)
+        settings_errors('fasp_payments');
     }
     $opt = fasp_pay_get();
 
@@ -325,10 +344,10 @@ if (!function_exists('fasp_bridge_sync_payments')) {
     }
     // Hook when the unified option is updated
     add_action('updated_option', function($option, $old_value, $value){
-        if ($option === 'fasp_payments' || $option_name === 'fasp_payments') {
+        if ($option === 'fasp_payments') {
             fasp_bridge_sync_payments($option, $old_value, $value);
         }
-    }, 10, 4);
+    }, 10, 3);
     
     
     
