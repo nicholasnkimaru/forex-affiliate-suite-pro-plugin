@@ -1,9 +1,28 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-function fasp_stripe_keys(){
-  $pay = get_option('fasp_payments', []);
-  return [ trim($pay['stripe_pk'] ?? ''), trim($pay['stripe_sk'] ?? '') ];
+/**
+ * Get Stripe API keys using the canonical payments accessor.
+ *
+ * @return array [publishable_key, secret_key]
+ */
+function fasp_stripe_keys() {
+    // Use canonical accessor if available
+    if (function_exists('fasp_get_payments')) {
+        $payments = fasp_get_payments();
+        $pk = isset($payments['stripe']['pk']) ? trim($payments['stripe']['pk']) : '';
+        $sk = isset($payments['stripe']['sk']) ? trim($payments['stripe']['sk']) : '';
+        if (!empty($pk) && !empty($sk)) {
+            return array($pk, $sk);
+        }
+    }
+    
+    // Fallback to raw option for backwards compatibility
+    $pay = get_option('fasp_payments', array());
+    $pk = isset($pay['stripe_pk']) ? trim($pay['stripe_pk']) : '';
+    $sk = isset($pay['stripe_sk']) ? trim($pay['stripe_sk']) : '';
+    
+    return array($pk, $sk);
 }
 
 // Shortcode: [fasp_checkout amount="9.99" currency="USD" description="eBook" success="/thank-you"]
@@ -26,7 +45,7 @@ add_shortcode('fasp_checkout', function($atts){
 });
 
 add_action('init', function(){
-  if (!empty($_POST['fasp_checkout_create']) && isset($_POST['fasp_checkout_nonce']) && wp_verify_nonce($_POST['fasp_checkout_nonce'],'fasp_checkout_create')){
+  if (!empty($_POST['fasp_checkout_create']) && isset($_POST['fasp_checkout_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['fasp_checkout_nonce'])),'fasp_checkout_create')){
     list($pk, $sk) = fasp_stripe_keys(); if (!$pk || !$sk) wp_die('Stripe not configured');
     $amt = floatval($_POST['amount']); $cur = sanitize_text_field($_POST['currency']); $desc = sanitize_text_field($_POST['description']);
     $succ = esc_url_raw(home_url($_POST['success'] ?? '/'));
@@ -52,6 +71,6 @@ add_action('init', function(){
   }
   // On success, mark purchase + fire events
   if (!empty($_GET['fasp_paid'])){
-    do_action('fasp/event/purchase', ['event_id'=>'purchase','custom_data'=>['currency'=>get_woocommerce_currency() ?: 'USD', 'value'=> (float)($_GET['amount'] ?? 0) ]]);
+    do_action('fasp/event/purchase', ['event_id'=>'purchase','custom_data'=>['currency'=>function_exists('get_woocommerce_currency') ? get_woocommerce_currency() : 'USD', 'value'=> (float)(isset($_GET['amount']) ? $_GET['amount'] : 0) ]]);
   }
 });
