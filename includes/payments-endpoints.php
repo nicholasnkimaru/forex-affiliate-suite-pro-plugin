@@ -1,6 +1,11 @@
 <?php if (is_admin() && !defined('FASP_LEGACY_HTML_GUARD')) { /* prevent stray output in admin */ }
 if (!defined('ABSPATH')) exit;
 
+// Maximum number of processed events to store for idempotency
+if (!defined('FASP_MAX_PROCESSED_EVENTS')) {
+    define('FASP_MAX_PROCESSED_EVENTS', 1000);
+}
+
 /**
  * Verify Stripe webhook signature manually using HMAC-SHA256.
  *
@@ -106,10 +111,11 @@ function fasp_mark_stripe_event_processed($event_id) {
     // Add new event
     $processed[$event_id] = time();
     
-    // Limit to last 1000 events to prevent unbounded growth
-    if (count($processed) > 1000) {
+    // Limit to max events to prevent unbounded growth
+    $max_events = FASP_MAX_PROCESSED_EVENTS;
+    if (count($processed) > $max_events) {
         asort($processed);
-        $processed = array_slice($processed, -1000, 1000, true);
+        $processed = array_slice($processed, -$max_events, $max_events, true);
     }
     
     update_option('fasp_stripe_processed_events', $processed, false);

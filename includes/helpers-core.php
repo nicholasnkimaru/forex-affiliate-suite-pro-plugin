@@ -380,9 +380,14 @@ if (!function_exists('fasp_increment_request_count')) {
  */
 if (!function_exists('fasp_log')) {
   function fasp_log($message) {
+    static $logger = null;
+    
     $log_message = is_string($message) ? $message : wp_json_encode($message);
+    
     if (class_exists('WC_Logger')) {
-      $logger = new WC_Logger();
+      if ($logger === null) {
+        $logger = new WC_Logger();
+      }
       $logger->add('fasp', $log_message);
     } else {
       // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
