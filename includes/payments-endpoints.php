@@ -139,6 +139,11 @@ add_action('rest_api_init', function(){
               }
               return array('ok' => true, 'message' => 'Event already processed');
           }
+      } else {
+          // Log warning that verification is skipped
+          if (function_exists('fasp_log')) {
+              fasp_log('Stripe webhook received without signature verification (no webhook secret configured)', 'warning');
+          }
       }
 
       $data = json_decode($payload, true);

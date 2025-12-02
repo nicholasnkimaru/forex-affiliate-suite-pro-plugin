@@ -259,13 +259,14 @@ function fasp_mpesa_push(){
 
     $shortcode = $mpesa['till'] ?? ($mpesa['paybill'] ?? '');
     $passkey   = $mpesa['passkey'] ?? '';
-    $account   = 'FASP';
     $consumer_key = $mpesa['consumer_key'] ?? '';
     $consumer_secret = $mpesa['consumer_secret'] ?? '';
 
-    // Determine mode from legacy flat keys if needed
+    // Determine mode and account from legacy flat keys if needed
     $opt = get_option('fasp_payments', array());
     $mode = $opt['mpesa_mode'] ?? 'till';
+    // Use configured account reference, fallback to site name or FASP
+    $account = !empty($opt['mpesa_account']) ? $opt['mpesa_account'] : (get_bloginfo('name') ?: 'FASP');
 
     if (!$consumer_key || !$consumer_secret || !$shortcode || !$passkey){
         fasp_json(array('ok' => false, 'error' => 'M-Pesa not properly configured'), 400);
