@@ -2,6 +2,12 @@
 if (!defined('ABSPATH')) exit;
 
 function fasp_stripe_keys(){
+  // Use canonical accessor if available
+  if (function_exists('fasp_get_payments')) {
+      $payments = fasp_get_payments();
+      return array(trim($payments['stripe']['pk'] ?? ''), trim($payments['stripe']['sk'] ?? ''));
+  }
+  // Fallback to legacy
   $pay = get_option('fasp_payments', []);
   return [ trim($pay['stripe_pk'] ?? ''), trim($pay['stripe_sk'] ?? '') ];
 }

@@ -25,27 +25,29 @@ add_action('template_redirect', function(){
   do_action('fasp_webhook_'.$provider, $raw, $_REQUEST, function_exists('getallheaders') ? getallheaders() : array());
   status_header(200); echo 'OK'; exit;
 });
-add_shortcode('fasp_checkout', function($atts){
-  $o = get_option('fasp_payments', array('env'=>'sandbox'));
-  $env = esc_html($o['env'] ?? 'sandbox');
+add_shortcode('fasp_checkout_buttons', function($atts){
+  // Use canonical accessor if available
+  $payments = function_exists('fasp_get_payments') ? fasp_get_payments() : array();
+  $raw = get_option('fasp_payments', array('env'=>'sandbox'));
+  $env = esc_html($payments['mpesa']['env'] ?? ($raw['env'] ?? 'sandbox'));
   ob_start(); ?>
   <div class="fasp-wrap">
     <h3>Complete Payment</h3>
     <p class="fasp-muted">Environment: <strong><?php echo $env; ?></strong></p>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <?php if (!empty($o['paypal_email']) || !empty($o['paypal_client_id'])): ?>
+      <?php if (!empty($payments['paypal']['email']) || !empty($payments['paypal']['client'])): ?>
         <a class="fasp-button" href="<?php echo esc_url( add_query_arg('fasp_checkout','paypal', home_url('/')) ); ?>">Pay with PayPal</a>
       <?php endif; ?>
-      <?php if (!empty($o['stripe_pk'])): ?>
+      <?php if (!empty($payments['stripe']['pk'])): ?>
         <a class="fasp-button" href="<?php echo esc_url( add_query_arg('fasp_checkout','stripe', home_url('/')) ); ?>">Pay with Card (Stripe)</a>
       <?php endif; ?>
-      <?php if (!empty($o['flutter_pk'])): ?>
+      <?php if (!empty($payments['flutterwave']['public'])): ?>
         <a class="fasp-button" href="<?php echo esc_url( add_query_arg('fasp_checkout','flutter', home_url('/')) ); ?>">Pay with Flutterwave</a>
       <?php endif; ?>
-      <?php if (!empty($o['paystack_pk'])): ?>
+      <?php if (!empty($payments['paystack']['public'])): ?>
         <a class="fasp-button" href="<?php echo esc_url( add_query_arg('fasp_checkout','paystack', home_url('/')) ); ?>">Pay with Paystack</a>
       <?php endif; ?>
-      <?php if (!empty($o['mpesa_short_code'])): ?>
+      <?php if (!empty($payments['mpesa']['till']) || !empty($payments['mpesa']['paybill'])): ?>
         <a class="fasp-button" href="<?php echo esc_url( add_query_arg('fasp_checkout','mpesa', home_url('/')) ); ?>">Pay with M-Pesa</a>
       <?php endif; ?>
     </div>

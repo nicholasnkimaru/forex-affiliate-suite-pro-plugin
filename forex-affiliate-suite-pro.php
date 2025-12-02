@@ -25,6 +25,8 @@ register_activation_hook(__FILE__, function(){
 });
 register_deactivation_hook(__FILE__, function(){ if (function_exists('flush_rewrite_rules')) flush_rewrite_rules(); });
 
+// Core helpers loaded early for canonical accessors
+require_once FASP_PATH.'includes/helpers-core.php';
 require_once FASP_PATH.'includes/helpers.php';
 require_once FASP_PATH.'includes/admin.php';
 require_once FASP_PATH.'includes/admin-menu-hubs.php';
@@ -87,12 +89,10 @@ require_once __DIR__ . '/includes/routes-platforms.php';
 require_once __DIR__ . '/includes/cpt-resources.php';
 require_once __DIR__ . '/includes/cpt-coaches.php';
 require_once __DIR__ . '/includes/admin-settings.php';
-require_once __DIR__ . '/includes/tracking.php';
 require_once __DIR__ . '/includes/gating.php';
 require_once __DIR__ . '/includes/woocommerce-dashboard.php';
 require_once __DIR__ . '/includes/shortcodes-join.php';
 require_once __DIR__ . '/includes/shortcodes-resources.php';
-require_once __DIR__ . '/includes/deriv-oauth.php';
 require_once __DIR__ . '/includes/admin-placeholders.php';
 require_once __DIR__ . '/includes/coach-template-loader.php';
 
@@ -127,15 +127,9 @@ require_once __DIR__ . '/includes/resource-template-loader.php';
 require_once __DIR__ . '/includes/admin-gads-offline.php';
 require_once __DIR__ . '/includes/admin-creatives-lab.php';
 require_once __DIR__ . '/includes/consent-soft.php';
-// Payments admin loader — prefer unified file, fall back to legacy shim if present.
-$__pay_files = [
-    __DIR__ . '/includes/fasp-admin-payments.php',   // unified
-    
-];
-foreach ($__pay_files as $__pf) {
-    if (file_exists($__pf)) { require_once $__pf; break; }
-}
-unset($__pay_files, $__pf);
+
+// Payments admin (unified)
+require_once __DIR__ . '/includes/fasp-admin-payments.php';
 require_once __DIR__ . '/includes/payments-endpoints.php';
 
 /** FASP classic editor globally */
@@ -153,19 +147,18 @@ foreach (['includes/admin-bootstrap.php','includes/admin-payments-pro.php','incl
 require_once __DIR__ . '/includes/admin-capability-guard.php';
 
 // FASP v3plus bake loader
-if (function_exists('add_action')) { require_once __DIR__.'/includes/helpers-core.php'; require_once __DIR__.'/includes/tracking-bake.php'; require_once __DIR__.'/includes/admin-menu-augment.php'; // Payments admin loader — prefer unified file, fall back to legacy shim if present.
-$__pay_files = [
-    __DIR__ . '/includes/fasp-admin-payments.php',   // unified
-    
-];
-foreach ($__pay_files as $__pf) {
-    if (file_exists($__pf)) { require_once $__pf; break; }
+if (function_exists('add_action')) {
+    require_once __DIR__.'/includes/tracking-bake.php';
+    require_once __DIR__.'/includes/admin-menu-augment.php';
+    require_once __DIR__.'/includes/admin-creatives-lab-impl.php';
+    require_once __DIR__.'/includes/diagnostics.php';
+    require_once __DIR__.'/includes/routes-frontend.php';
+    require_once __DIR__.'/includes/reports.php';
+    require_once __DIR__.'/includes/tools.php';
+    require_once __DIR__.'/includes/user-dash.php';
 }
-unset($__pay_files, $__pf); require_once __DIR__.'/includes/admin-creatives-lab-impl.php'; require_once __DIR__.'/includes/diagnostics.php'; require_once __DIR__.'/includes/routes-frontend.php'; require_once __DIR__.'/includes/reports.php'; require_once __DIR__.'/includes/tools.php'; require_once __DIR__.'/includes/user-dash.php'; }
 
 require_once plugin_dir_path(__FILE__) . 'includes/fasp-admin-menu.php';
-
-require_once plugin_dir_path(__FILE__) . 'includes/fasp-admin-payments.php';
 
 require_once plugin_dir_path(__FILE__) . 'includes/fasp-shortcodes.php';
 
