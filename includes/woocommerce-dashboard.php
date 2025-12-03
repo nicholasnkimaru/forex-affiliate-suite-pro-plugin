@@ -89,7 +89,7 @@ function fasp_wc_dashboard() {
                                     <span class="fasp-pill" style="margin-left:8px;"><?php esc_html_e('Not verified', 'forex-affiliate-suite-pro'); ?></span>
                                 <?php endif; ?>
                             </div>
-                            <a class="fasp-button" href="<?php echo esc_url(home_url('/fasp-go/' . rawurlencode($safe_slug) . '?dest=signup')); ?>"><?php
+                            <a class="fasp-button" href="<?php echo esc_url(add_query_arg('dest', 'signup', home_url('/fasp-go/' . rawurlencode($safe_slug)))); ?>"><?php
                                 /* translators: %s: platform name */
                                 printf(esc_html__('Join %s', 'forex-affiliate-suite-pro'), esc_html($pl['name'] ?? $safe_slug));
                             ?></a>

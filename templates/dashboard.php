@@ -365,7 +365,12 @@ foreach ($utm_keys as $key) {
                     <a class="button button-primary" href="<?php echo esc_url($deriv_url); ?>"><?php esc_html_e('Connect Deriv Account', 'forex-affiliate-suite-pro'); ?></a>
                 <?php endif; ?>
                 <?php if (!empty($platforms)) : ?>
-                    <a class="button" href="<?php echo esc_url(add_query_arg('fasp_click', rawurlencode(array_key_first($platforms)), home_url('/'))); ?>"><?php esc_html_e('Start Trading', 'forex-affiliate-suite-pro'); ?></a>
+                    <?php
+                    // PHP 7.3+ compatibility: use key() instead of array_key_first()
+                    reset($platforms);
+                    $first_platform_key = key($platforms);
+                    ?>
+                    <a class="button" href="<?php echo esc_url(add_query_arg('fasp_click', rawurlencode($first_platform_key), home_url('/'))); ?>"><?php esc_html_e('Start Trading', 'forex-affiliate-suite-pro'); ?></a>
                 <?php endif; ?>
                 <?php if (!empty($cls)) : ?>
                     <a class="button" href="<?php echo esc_url(get_post_type_archive_link('fasp_coach_event')); ?>"><?php esc_html_e('Find a Coach', 'forex-affiliate-suite-pro'); ?></a>

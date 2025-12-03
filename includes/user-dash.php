@@ -186,13 +186,14 @@ if (!function_exists('fasp_render_user_dash')) {
         }
         
         global $wpdb;
-        $table_name = esc_sql($wpdb->prefix . 'fasp_clicks');
+        // Table name is validated as it's derived from WordPress prefix and a constant suffix
+        $table_name = $wpdb->prefix . 'fasp_clicks';
         $d30 = gmdate('Y-m-d', strtotime('-30 days')) . ' 00:00:00';
         $now = gmdate('Y-m-d') . ' 23:59:59';
         
-        // Use prepare correctly with table name escaped
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is safe (from WP prefix + constant)
         $query = $wpdb->prepare(
-            "SELECT action, COUNT(*) AS c FROM `{$table_name}` WHERE created_at BETWEEN %s AND %s GROUP BY action",
+            "SELECT action, COUNT(*) AS c FROM `" . esc_sql($table_name) . "` WHERE created_at BETWEEN %s AND %s GROUP BY action",
             $d30,
             $now
         );
