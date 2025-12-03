@@ -43,7 +43,7 @@ $deriv_url      = $deriv_app_id ? ("https://oauth.deriv.com/oauth2/authorize?app
     <div class="fasp-card">
       <h2>Platforms</h2>
       <?php if (empty($platforms)): ?>
-        <div class="fasp-note">No platforms available. Add them in <em>Forex Affiliate → Setup</em> and set visibility.</div>
+        <div class="fasp-note">No platforms available. Add them in <em>Forex Trading → Setup</em> and set visibility.</div>
       <?php else: ?>
         <table class="fasp-table">
           <thead><tr><th>Name</th><th>Link</th><th>Clicks</th><th>Action</th></tr></thead>

@@ -2,7 +2,7 @@
 if (!defined('ABSPATH')) { exit; }
 add_action('init', function(){ add_rewrite_endpoint('forex-affiliate', EP_ROOT|EP_PAGES); });
 add_filter('query_vars', function($v){ $v[]='forex-affiliate'; return $v; });
-add_filter('woocommerce_account_menu_items', function($items){ $new=[]; foreach($items as $k=>$v){ $new[$k]=$v; if($k==='dashboard'){ $new['forex-affiliate']='Forex Affiliate'; }} if(!isset($new['forex-affiliate'])) $new['forex-affiliate']='Forex Affiliate'; return $new; });
+add_filter('woocommerce_account_menu_items', function($items){ $new=[]; foreach($items as $k=>$v){ $new[$k]=$v; if($k==='dashboard'){ $new['forex-affiliate']='Forex Trading'; }} if(!isset($new['forex-affiliate'])) $new['forex-affiliate']='Forex Trading'; return $new; });
 add_action('woocommerce_account_forex-affiliate_endpoint','fasp_wc_dashboard');
 function fasp_wc_dashboard(){
     $uid = get_current_user_id(); $plats = function_exists('fasp_get_platforms')? fasp_get_platforms():[]; ?>
