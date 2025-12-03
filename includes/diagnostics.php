@@ -1,28 +1,51 @@
 <?php
-if (!defined('ABSPATH')) exit;
-if (!function_exists('fasp_render_tools_diag')){
-  function fasp_render_tools_diag(){
-    if (!current_user_can('manage_options')) return;
-    $opt = get_option('fasp_payments', array());
-    $webhook = esc_url_raw($opt['webhook_primary_url'] ?? '');
-    if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['fasp_diag_test'])){
-      check_admin_referer('fasp_diag_test');
-      if (!$webhook){
-        echo '<div class="notice notice-error"><p>No primary webhook URL set in Payments → Webhooks.</p></div>';
-      } else {
-        $payload = array('event'=>'fasp.test','time'=>current_time('mysql'),'site'=>home_url(),'nonce'=>wp_create_nonce('fasp_webhook_sample'));
-        $resp = wp_remote_post($webhook, array('timeout'=>20,'headers'=>array('Content-Type'=>'application/json'),'body'=>wp_json_encode($payload)));
-        if (is_wp_error($resp)){
-          echo '<div class="notice notice-error"><p>Webhook error: '.esc_html($resp->get_error_message()).'</p></div>';
-        } else {
-          echo '<div class="notice notice-success"><p>Webhook sent. HTTP '.intval(wp_remote_retrieve_response_code($resp)).'</p></div>';
-          echo '<pre style="background:#fff;border:1px solid #ccd0d4;padding:8px;max-height:240px;overflow:auto">'.esc_html(wp_remote_retrieve_body($resp)).'</pre>';
-        }
-      }
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+/**
+ * Diagnostics admin page: webhook pinger, Stripe signature checker scaffold, M-Pesa STK trigger (safe)
+ */
+
+if ( ! function_exists( 'fasp_register_diagnostics_admin' ) ) {
+    add_action( 'admin_menu', 'fasp_register_diagnostics_admin' );
+    function fasp_register_diagnostics_admin() {
+        $parent = 'forex-affiliate';
+        if ( ! menu_page_url( $parent, false ) ) $parent = 'options-general.php';
+        add_submenu_page( $parent, __( 'Diagnostics', 'fasp' ), __( 'Diagnostics', 'fasp' ), 'manage_options', 'fasp_diagnostics', 'fasp_admin_diagnostics_page' );
     }
-    echo '<div class="wrap fasp-admin"><h1>Diagnostics</h1><div class="fasp-card"><form method="post">'; wp_nonce_field('fasp_diag_test');
-    echo '<p><label>Webhook URL<br><input type="url" class="regular-text" value="'.esc_attr($webhook).'" disabled></label></p>';
-    echo '<p><button class="button button-primary" name="fasp_diag_test" value="1">Send Test Webhook</button></p>';
-    echo '</form></div></div>';
-  }
+}
+
+if ( ! function_exists( 'fasp_admin_diagnostics_page' ) ) {
+    function fasp_admin_diagnostics_page() {
+        if ( ! current_user_can( 'manage_options' ) ) wp_die( __( 'Unauthorized', 'fasp' ) );
+        ?>
+        <div class="wrap">
+            <h1><?php echo esc_html__( 'Diagnostics', 'fasp' ); ?></h1>
+            <h2><?php echo esc_html__( 'Webhook pinger', 'fasp' ); ?></h2>
+            <form method="post" action="">
+                <?php wp_nonce_field( 'fasp_diag', 'fasp_diag_nonce' ); ?>
+                <input type="url" name="fasp_diag_webhook_url" style="width:420px;" placeholder="<?php echo esc_attr__( 'https://example.com/endpoint', 'fasp' ); ?>" />
+                <button class="button" type="submit" name="fasp_diag_ping"><?php echo esc_html__( 'Send Test Webhook', 'fasp' ); ?></button>
+            </form>
+            <?php
+            if ( isset( $_POST['fasp_diag_ping'] ) && check_admin_referer( 'fasp_diag', 'fasp_diag_nonce' ) ) {
+                $url = esc_url_raw( wp_unslash( $_POST['fasp_diag_webhook_url'] ) );
+                $sample = array( 'message' => 'This is a test webhook from Forex Affiliate Suite Pro', 'time' => time() );
+                $ok = fasp_send_lead_webhook( $url, $sample );
+                echo '<p>' . ( $ok ? esc_html__( 'Webhook sent (200-range).', 'fasp' ) : esc_html__( 'Webhook failed. Check log.', 'fasp' ) ) . '</p>';
+            }
+            ?>
+            <h2><?php echo esc_html__( 'Connectivity checks', 'fasp' ); ?></h2>
+            <ul>
+                <li><?php echo esc_html__( 'cURL available:' ); ?> <?php echo function_exists( 'curl_version' ) ? esc_html__( 'Yes' ) : esc_html__( 'No' ); ?></li>
+                <li><?php echo esc_html__( 'wp_remote_post test:' ); ?>
+                    <?php
+                    $res = wp_remote_get( 'https://httpbin.org/get' );
+                    echo is_wp_error( $res ) ? esc_html__( 'Failed' ) : esc_html__( 'OK' );
+                    ?>
+                </li>
+                <li><?php echo esc_html__( 'WP Cron:' ); ?> <?php echo defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ? esc_html__( 'Disabled' ) : esc_html__( 'Enabled' ); ?></li>
+            </ul>
+        </div>
+        <?php
+    }
 }

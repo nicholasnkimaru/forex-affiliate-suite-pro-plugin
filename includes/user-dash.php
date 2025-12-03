@@ -1,27 +1,115 @@
 <?php
-if (!defined('ABSPATH')) exit;
-if (!function_exists('fasp_render_user_dash')){
-  function fasp_render_user_dash(){
-    if (!current_user_can('manage_options')) return;
-    global $wpdb; $t = $wpdb->prefix.'fasp_clicks';
-    $d30= date('Y-m-d', strtotime('-30 days')).' 00:00:00';
-    $now= date('Y-m-d').' 23:59:59';
-    $q = "SELECT action, COUNT(*) c FROM `$t` WHERE created_at BETWEEN %s AND %s GROUP BY action";
-    $rows30 = $wpdb->get_results( fasp_prepare($q,$d30,$now), ARRAY_A );
-    $map = array('click'=>0,'lead'=>0,'paid'=>0);
-    foreach($rows30 as $r){ $map[$r['action']] = intval($r['c']); }
-    $clicks=$map['click']; $leads=$map['lead']; $paid=$map['paid'];
-    $cr1 = $clicks? round($leads/$clicks*100,2) : 0;
-    $cr2 = $leads?  round($paid/$leads*100,2)  : 0;
-    echo '<div class="wrap fasp-admin"><h1>User Dashboard</h1><div class="fasp-grid">';
-    foreach([['Clicks (30d)',$clicks],['Leads (30d)',$leads],['Paid (30d)',$paid],['Click→Lead CR',$cr1."%"],['Lead→Paid CR',$cr2."%"]] as $c){
-      echo '<div class="fasp-card"><h2>'.esc_html($c[0]).'</h2><p style="font-size:20px"><strong>'.esc_html($c[1]).'</strong></p></div>';
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+/**
+ * Helper: collect dashboard data for a user (platforms, resources, coaches, gating state, utm)
+ *
+ * Backwards compatible; function_exists guards applied.
+ */
+
+if ( ! function_exists( 'fasp_get_user_dashboard_data' ) ) {
+    function fasp_get_user_dashboard_data( $user_id = 0 ) {
+        $user_id = intval( $user_id ) ?: get_current_user_id();
+        $data = array();
+
+        // Platforms: read plugin option or fallback
+        $platforms = array();
+        $opt = get_option( 'fasp_platforms', array() );
+        if ( is_array( $opt ) && ! empty( $opt ) ) {
+            foreach ( $opt as $slug => $p ) {
+                if ( isset( $p['visible_in_dashboard'] ) && ! $p['visible_in_dashboard'] ) {
+                    continue;
+                }
+                $platforms[] = array(
+                    'slug'     => $slug,
+                    'name'     => isset( $p['name'] ) ? $p['name'] : $slug,
+                    'excerpt'  => isset( $p['excerpt'] ) ? $p['excerpt'] : '',
+                    'affiliate'=> isset( $p['affiliate'] ) ? $p['affiliate'] : '',
+                );
+            }
+        } else {
+            $platforms[] = array(
+                'slug' => 'deriv',
+                'name' => 'Deriv',
+                'excerpt' => 'Open a Deriv account',
+                'affiliate' => '#',
+            );
+        }
+
+        // Resources CPT
+        $resources = get_posts( array(
+            'post_type'      => 'fasp_resource',
+            'posts_per_page' => 6,
+            'post_status'    => 'publish',
+        ) );
+
+        // Coaches CPT
+        $coaches = get_posts( array(
+            'post_type'      => 'fasp_coach',
+            'posts_per_page' => 6,
+            'post_status'    => 'publish',
+        ) );
+
+        // Gating: quick check
+        $gating_blocked = false;
+        $gating_message = '';
+        $gating_redirect = '';
+        $gating_opt = get_option( 'fasp_platform_gating', array() );
+        if ( ! empty( $gating_opt ) && is_array( $gating_opt ) ) {
+            if ( isset( $gating_opt['require_login'] ) && $gating_opt['require_login'] && ! is_user_logged_in() ) {
+                $gating_blocked = true;
+                $gating_message = __( 'Please log in to access resources.', 'fasp' );
+            }
+        }
+
+        // UTM detection (querystring or cookie)
+        $utm = array();
+        $utm_keys = array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term' );
+        foreach ( $utm_keys as $k ) {
+            if ( isset( $_GET[ $k ] ) ) {
+                $utm[ $k ] = sanitize_text_field( wp_unslash( $_GET[ $k ] ) );
+            } elseif ( isset( $_COOKIE[ $k ] ) ) {
+                $utm[ $k ] = sanitize_text_field( wp_unslash( $_COOKIE[ $k ] ) );
+            }
+        }
+
+        $data['platforms'] = $platforms;
+        $data['resources'] = $resources;
+        $data['coaches'] = $coaches;
+        $data['gating'] = array(
+            'blocked'  => $gating_blocked,
+            'message'  => $gating_message,
+            'redirect' => $gating_redirect,
+        );
+        $data['utm'] = $utm;
+
+        return $data;
     }
-    echo '</div><div class="fasp-card" style="margin-top:12px"><h2>Next Steps</h2><ol class="fasp-muted" style="line-height:1.8">';
-    echo '<li>Create a tracking link in <a href="'.esc_url(admin_url('admin.php?page=fasp_tools_utm')).'">UTM Builder</a>.</li>';
-    echo '<li>Connect a payment method in <a href="'.esc_url(admin_url('admin.php?page=fasp_payments')).'">Payments</a>.</li>';
-    echo '<li>Configure <a href="'.esc_url(admin_url('admin.php?page=fasp_platform_gating')).'">Gating</a> and <a href="'.esc_url(admin_url('admin.php?page=fasp_geo_gating')).'">Geo Gating</a>.</li>';
-    echo '<li>Send a <a href="'.esc_url(admin_url('admin.php?page=fasp_tools_diag')).'">test webhook</a>.</li>';
-    echo '</ol></div></div>';
-  }
+}
+
+if ( ! function_exists( 'fasp_render_deriv_connect_button' ) ) {
+    function fasp_render_deriv_connect_button() {
+        if ( function_exists( 'fasp_deriv_connect_url' ) ) {
+            $url = fasp_deriv_connect_url();
+            return '<a class="fasp-cta" href="' . esc_url( $url ) . '">' . esc_html__( 'Connect Deriv', 'fasp' ) . '</a>';
+        }
+        return '<a class="fasp-cta" href="' . esc_url( home_url( '/connect-deriv/' ) ) . '">' . esc_html__( 'Connect Deriv', 'fasp' ) . '</a>';
+    }
+}
+
+if ( ! function_exists( 'fasp_dashboard_shortcode' ) ) {
+    function fasp_dashboard_shortcode( $atts = array() ) {
+        ob_start();
+        $plugin_root = dirname( __DIR__ );
+        $tpl = $plugin_root . '/templates/dashboard.php';
+        if ( file_exists( $tpl ) ) {
+            include $tpl;
+        } else {
+            echo '<p>' . esc_html__( 'Dashboard template missing', 'fasp' ) . '</p>';
+        }
+        return ob_get_clean();
+    }
+    add_shortcode( 'fasp_dashboard', 'fasp_dashboard_shortcode' );
 }

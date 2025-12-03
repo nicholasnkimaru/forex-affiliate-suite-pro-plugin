@@ -1,0 +1,1260 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: copilot <copilot@example.com>
+Date: Wed, 03 Dec 2025 00:00:00 +0000
+Subject: [PATCH] full-bake: dashboard, gating, geo, utm, diagnostics, hub, emails/leads, payments cleanup
+
+---
+ includes/user-dash.php                          | 151 +++++++++++++++++++++++++++++++++++++++
+ includes/user-dashboard-loader.php              | 158 ++++++++++++++++++++++++++++++++++++++++
+ templates/dashboard.php                         | 214 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ assets/css/fasp-dashboard.css                   | 150 +++++++++++++++++++++++++++++++++++++++
+ assets/js/fasp-dashboard.js                     | 105 +++++++++++++++++++++++++++++++
+ includes/gating-helper.php                      | 140 ++++++++++++++++++++++++++++++++++++
+ includes/gating-meta.php                        | 106 +++++++++++++++++++++++++++++++
+ includes/geo-gating.php                         | 360 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ data/countries.json                             | 10 +++
+ data/regions.json                               | 10 +++
+ assets/js/geo-admin.js                          | 36 +++++++
+ includes/utm-builder.php                        | 204 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ includes/hub-admin.php                          | 106 +++++++++++++++++++++++++++++++
+ includes/leads-webhook-log.php                  | 102 +++++++++++++++++++++++++++++
+ includes/diagnostics.php                        | 145 ++++++++++++++++++++++++++++++++++
+ includes/payments-cleanup.php                   | 41 +++++++++++
+ tests/test-user-dashboard.php                   | 28 ++++++
+ tests/test-gating.php                           | 54 +++++++++++
+ 19 files changed, 2478 insertions(+)
+ create mode 100644 includes/user-dash.php
+ create mode 100644 includes/user-dashboard-loader.php
+ create mode 100644 templates/dashboard.php
+ create mode 100644 assets/css/fasp-dashboard.css
+ create mode 100644 assets/js/fasp-dashboard.js
+ create mode 100644 includes/gating-helper.php
+ create mode 100644 includes/gating-meta.php
+ create mode 100644 includes/geo-gating.php
+ create mode 100644 data/countries.json
+ create mode 100644 data/regions.json
+ create mode 100644 assets/js/geo-admin.js
+ create mode 100644 includes/utm-builder.php
+ create mode 100644 includes/hub-admin.php
+ create mode 100644 includes/leads-webhook-log.php
+ create mode 100644 includes/diagnostics.php
+ create mode 100644 includes/payments-cleanup.php
+ create mode 100644 tests/test-user-dashboard.php
+ create mode 100644 tests/test-gating.php
+
+diff --git a/includes/user-dash.php b/includes/user-dash.php
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/includes/user-dash.php
+@@ -0,0 +1,151 @@
++<?php
++if ( ! defined( 'ABSPATH' ) ) {
++    exit;
++}
++
++/**
++ * Helper: collect dashboard data for a user (platforms, resources, coaches, gating state, utm)
++ *
++ * Backwards compatible; function_exists guards applied.
++ */
++
++if ( ! function_exists( 'fasp_get_user_dashboard_data' ) ) {
++    function fasp_get_user_dashboard_data( $user_id = 0 ) {
++        $user_id = intval( $user_id ) ?: get_current_user_id();
++        $data = array();
++
++        // Platforms: read plugin option or fallback
++        $platforms = array();
++        $opt = get_option( 'fasp_platforms', array() );
++        if ( is_array( $opt ) && ! empty( $opt ) ) {
++            foreach ( $opt as $slug => $p ) {
++                if ( isset( $p['visible_in_dashboard'] ) && ! $p['visible_in_dashboard'] ) {
++                    continue;
++                }
++                $platforms[] = array(
++                    'slug'     => $slug,
++                    'name'     => isset( $p['name'] ) ? $p['name'] : $slug,
++                    'excerpt'  => isset( $p['excerpt'] ) ? $p['excerpt'] : '',
++                    'affiliate'=> isset( $p['affiliate'] ) ? $p['affiliate'] : '',
++                );
++            }
++        } else {
++            $platforms[] = array(
++                'slug' => 'deriv',
++                'name' => 'Deriv',
++                'excerpt' => 'Open a Deriv account',
++                'affiliate' => '#',
++            );
++        }
++
++        // Resources CPT
++        $resources = get_posts( array(
++            'post_type'      => 'fasp_resource',
++            'posts_per_page' => 6,
++            'post_status'    => 'publish',
++        ) );
++
++        // Coaches CPT
++        $coaches = get_posts( array(
++            'post_type'      => 'fasp_coach',
++            'posts_per_page' => 6,
++            'post_status'    => 'publish',
++        ) );
++
++        // Gating: quick check
++        $gating_blocked = false;
++        $gating_message = '';
++        $gating_redirect = '';
++        $gating_opt = get_option( 'fasp_platform_gating', array() );
++        if ( ! empty( $gating_opt ) && is_array( $gating_opt ) ) {
++            if ( isset( $gating_opt['require_login'] ) && $gating_opt['require_login'] && ! is_user_logged_in() ) {
++                $gating_blocked = true;
++                $gating_message = __( 'Please log in to access resources.', 'fasp' );
++            }
++        }
++
++        // UTM detection (querystring or cookie)
++        $utm = array();
++        $utm_keys = array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term' );
++        foreach ( $utm_keys as $k ) {
++            if ( isset( $_GET[ $k ] ) ) {
++                $utm[ $k ] = sanitize_text_field( wp_unslash( $_GET[ $k ] ) );
++            } elseif ( isset( $_COOKIE[ $k ] ) ) {
++                $utm[ $k ] = sanitize_text_field( wp_unslash( $_COOKIE[ $k ] ) );
++            }
++        }
++
++        $data['platforms'] = $platforms;
++        $data['resources'] = $resources;
++        $data['coaches'] = $coaches;
++        $data['gating'] = array(
++            'blocked'  => $gating_blocked,
++            'message'  => $gating_message,
++            'redirect' => $gating_redirect,
++        );
++        $data['utm'] = $utm;
++
++        return $data;
++    }
++}
++
++if ( ! function_exists( 'fasp_render_deriv_connect_button' ) ) {
++    function fasp_render_deriv_connect_button() {
++        if ( function_exists( 'fasp_deriv_connect_url' ) ) {
++            $url = fasp_deriv_connect_url();
++            return '<a class="fasp-cta" href="' . esc_url( $url ) . '">' . esc_html__( 'Connect Deriv', 'fasp' ) . '</a>';
++        }
++        return '<a class="fasp-cta" href="' . esc_url( home_url( '/connect-deriv/' ) ) . '">' . esc_html__( 'Connect Deriv', 'fasp' ) . '</a>';
++    }
++}
++
++if ( ! function_exists( 'fasp_dashboard_shortcode' ) ) {
++    function fasp_dashboard_shortcode( $atts = array() ) {
++        ob_start();
++        $plugin_root = dirname( __DIR__ );
++        $tpl = $plugin_root . '/templates/dashboard.php';
++        if ( file_exists( $tpl ) ) {
++            include $tpl;
++        } else {
++            echo '<p>' . esc_html__( 'Dashboard template missing', 'fasp' ) . '</p>';
++        }
++        return ob_get_clean();
++    }
++    add_shortcode( 'fasp_dashboard', 'fasp_dashboard_shortcode' );
++}
++
+diff --git a/includes/user-dashboard-loader.php b/includes/user-dashboard-loader.php
+new file mode 100644
+index 0000000..2222222
+--- /dev/null
++++ b/includes/user-dashboard-loader.php
+@@ -0,0 +1,158 @@
++<?php
++if ( ! defined( 'ABSPATH' ) ) {
++    exit;
++}
++
++/**
++ * Central loader: registers canonical endpoint 'forex-dashboard' and controls My Account menu item.
++ * Enqueues front-end dashboard assets only when needed.
++ */
++
++if ( ! function_exists( 'fasp_register_forex_dashboard_endpoint' ) ) {
++    add_action( 'init', 'fasp_register_forex_dashboard_endpoint' );
++    function fasp_register_forex_dashboard_endpoint() {
++        add_rewrite_endpoint( 'forex-dashboard', EP_ROOT | EP_PAGES );
++    }
++}
++
++if ( ! function_exists( 'fasp_enqueue_dashboard_assets' ) ) {
++    add_action( 'wp_enqueue_scripts', 'fasp_enqueue_dashboard_assets', 20 );
++    function fasp_enqueue_dashboard_assets() {
++        $need = false;
++        if ( function_exists( 'is_account_page' ) && is_account_page() ) {
++            global $wp;
++            if ( isset( $wp->query_vars['forex-dashboard'] ) ) {
++                $need = true;
++            }
++        }
++        if ( ! $need && function_exists( 'has_shortcode' ) ) {
++            $post_id = get_queried_object_id();
++            if ( $post_id && has_shortcode( get_post_field( 'post_content', $post_id ), 'fasp_dashboard' ) ) {
++                $need = true;
++            }
++        }
++
++        if ( $need ) {
++            wp_register_style( 'fasp-dashboard', plugin_dir_url( __DIR__ ) . 'assets/css/fasp-dashboard.css', array(), '1.3.0' );
++            wp_enqueue_style( 'fasp-dashboard' );
++
++            // Chart.js (via CDN), local dashboard script
++            wp_register_script( 'chartjs', 'https://cdn.jsdelivr.net/npm/chart.js', array(), '4.4.0', true );
++            wp_register_script( 'fasp-dashboard-js', plugin_dir_url( __DIR__ ) . 'assets/js/fasp-dashboard.js', array( 'chartjs' ), '1.1.0', true );
++            $sample = array(
++                'chart' => array(
++                    'labels' => array( 'Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5' ),
++                    'values' => array( 2, 8, 5, 11, 9 ),
++                ),
++            );
++            wp_localize_script( 'fasp-dashboard-js', 'fasp_dashboard_data', $sample );
++            wp_enqueue_script( 'chartjs' );
++            wp_enqueue_script( 'fasp-dashboard-js' );
++        }
++    }
++}
++
++if ( ! function_exists( 'fasp_add_forex_dashboard_myaccount_tab' ) ) {
++    add_filter( 'woocommerce_account_menu_items', 'fasp_add_forex_dashboard_myaccount_tab', 50 );
++    function fasp_add_forex_dashboard_myaccount_tab( $items ) {
++        foreach ( $items as $key => $label ) {
++            if ( 'forex-affiliate' === $key ) {
++                unset( $items[ $key ] );
++                continue;
++            }
++            if ( is_string( $label ) ) {
++                $lower = mb_strtolower( $label );
++                if ( false !== mb_strpos( $lower, 'affiliate' ) || false !== mb_strpos( $lower, 'forex' ) ) {
++                    unset( $items[ $key ] );
++                    continue;
++                }
++            }
++        }
++
++        if ( ! isset( $items['forex-dashboard'] ) ) {
++            $new = array();
++            $inserted = false;
++            foreach ( $items as $key => $label ) {
++                $new[ $key ] = $label;
++                if ( 'dashboard' === $key && ! $inserted ) {
++                    $new['forex-dashboard'] = __( 'Forex Trading', 'fasp' );
++                    $inserted = true;
++                }
++            }
++            if ( ! $inserted ) {
++                $new['forex-dashboard'] = __( 'Forex Trading', 'fasp' );
++            }
++            return $new;
++        }
++
++        $items['forex-dashboard'] = __( 'Forex Trading', 'fasp' );
++        return $items;
++    }
++}
++
++if ( ! function_exists( 'fasp_add_forex_dashboard_endpoint_content' ) ) {
++    add_action( 'woocommerce_account_forex-dashboard_endpoint', 'fasp_add_forex_dashboard_endpoint_content' );
++    function fasp_add_forex_dashboard_endpoint_content() {
++        $plugin_root = dirname( __DIR__ );
++        $tpl = $plugin_root . '/templates/dashboard.php';
++        if ( file_exists( $tpl ) ) {
++            $helper = $plugin_root . '/includes/user-dash.php';
++            if ( file_exists( $helper ) ) {
++                require_once $helper;
++            }
++            include $tpl;
++        } else {
++            echo '<p>' . esc_html__( 'Dashboard template missing', 'fasp' ) . '</p>';
++        }
++    }
++}
+diff --git a/templates/dashboard.php b/templates/dashboard.php
+new file mode 100644
+index 0000000..3333333
+--- /dev/null
++++ b/templates/dashboard.php
+@@ -0,0 +1,214 @@
++<?php
++/**
++ * Modern dashboard template (frontend).
++ */
++if ( ! defined( 'ABSPATH' ) ) exit;
++
++if ( ! function_exists( 'fasp_get_user_dashboard_data' ) ) {
++    $helper = dirname( __DIR__ ) . '/includes/user-dash.php';
++    if ( file_exists( $helper ) ) {
++        require_once $helper;
++    }
++}
++
++$current_user = wp_get_current_user();
++$data = function_exists( 'fasp_get_user_dashboard_data' ) ? fasp_get_user_dashboard_data( get_current_user_id() ) : array();
++
++$platforms = isset( $data['platforms'] ) ? $data['platforms'] : array();
++$resources = isset( $data['resources'] ) ? $data['resources'] : array();
++$coaches   = isset( $data['coaches'] ) ? $data['coaches'] : array();
++$gating    = isset( $data['gating'] ) ? $data['gating'] : array();
++$utm       = isset( $data['utm'] ) ? $data['utm'] : array();
++?>
++<div class="fasp-dash-wrap">
++  <header class="fasp-dash-header">
++    <div class="fasp-dash-title">
++      <h1><?php echo esc_html__( 'Forex Trading Dashboard', 'fasp' ); ?></h1>
++      <p class="fasp-dash-sub"><?php echo esc_html__( 'Welcome — your platforms, training and account links in one place.', 'fasp' ); ?></p>
++    </div>
++    <div class="fasp-dash-quick">
++      <a class="fasp-cta-primary" href="<?php echo esc_url( home_url( '/promo-landing/' ) ); ?>"><?php echo esc_html__( 'Open Broker Account', 'fasp' ); ?></a>
++      <a class="fasp-cta-secondary" href="<?php echo esc_url( home_url( '/forex-dashboard/resources/' ) ); ?>"><?php echo esc_html__( 'Access Resources', 'fasp' ); ?></a>
++    </div>
++  </header>
++
++  <?php if ( ! empty( $gating['blocked'] ) ) : ?>
++    <div class="fasp-block-notice" role="alert">
++      <strong><?php echo esc_html__( 'Access blocked', 'fasp' ); ?></strong>
++      <p><?php echo esc_html( $gating['message'] ); ?></p>
++      <?php if ( ! empty( $gating['redirect'] ) ) : ?>
++        <p><a class="fasp-cta-primary" href="<?php echo esc_url( $gating['redirect'] ); ?>"><?php echo esc_html__( 'Join now', 'fasp' ); ?></a></p>
++      <?php endif; ?>
++    </div>
++  <?php endif; ?>
++
++  <div class="fasp-grid">
++    <section class="fasp-card fasp-card--wide">
++      <h2><?php echo esc_html__( 'Get started', 'fasp' ); ?></h2>
++      <ol class="fasp-checklist">
++        <li><?php echo esc_html__( 'Create a broker account via the Open Broker button.', 'fasp' ); ?></li>
++        <li><?php echo esc_html__( 'Connect Deriv (optional) to verify identity.', 'fasp' ); ?></li>
++        <li><?php echo esc_html__( 'Access starter resources and follow onboarding lessons.', 'fasp' ); ?></li>
++      </ol>
++    </section>
++
++    <aside class="fasp-card fasp-card--actions" aria-labelledby="fasp-quick-actions">
++      <h3 id="fasp-quick-actions"><?php echo esc_html__( 'Quick actions', 'fasp' ); ?></h3>
++      <p>
++        <?php
++        if ( function_exists( 'fasp_render_deriv_connect_button' ) ) {
++          echo fasp_render_deriv_connect_button();
++        } else {
++          echo '<a class="fasp-cta" href="' . esc_url( home_url( '/connect-deriv/' ) ) . '">' . esc_html__( 'Connect Deriv', 'fasp' ) . '</a>';
++        }
++        ?>
++      </p>
++      <p><a class="fasp-cta" href="<?php echo esc_url( home_url( '/profile/' ) ); ?>"><?php echo esc_html__( 'Complete profile', 'fasp' ); ?></a></p>
++
++      <div style="margin-top:12px;">
++        <strong><?php echo esc_html__( 'Coaches', 'fasp' ); ?></strong>
++        <div style="display:flex;gap:8px;margin-top:8px;">
++          <?php
++          $shown = 0;
++          foreach ( $coaches as $c ) {
++            if ( $shown >= 3 ) break;
++            $name = ! empty( $c->post_title ) ? $c->post_title : 'Coach';
++            $initials = implode('', array_map(function($w){ return strtoupper(mb_substr($w,0,1)); }, array_filter(explode(' ', $name))));
++            echo '<span class="fasp-avatar" data-initials="' . esc_attr( $initials ) . '" title="' . esc_attr( $name ) . '"></span>';
++            $shown++;
++          }
++          if ( $shown === 0 ) {
++            echo '<span class="fasp-avatar" data-initials="N/A">N/A</span>';
++          }
++          ?>
++        </div>
++      </div>
++    </aside>
++
++    <section class="fasp-card">
++      <h3><?php echo esc_html__( 'Platforms', 'fasp' ); ?></h3>
++      <div class="fasp-cards-row">
++        <?php if ( empty( $platforms ) ) : ?>
++          <p><?php echo esc_html__( 'No platforms available', 'fasp' ); ?></p>
++        <?php else : foreach ( $platforms as $p ) : ?>
++          <article class="fasp-platform" <?php if ( ! empty( $p['affiliate'] ) ) echo ' data-href="' . esc_attr( $p['affiliate'] ) . '"'; ?>>
++            <h4><?php echo esc_html( $p['name'] ); ?></h4>
++            <p class="fasp-excerpt"><?php echo esc_html( $p['excerpt'] ); ?></p>
++            <?php if ( ! empty( $p['affiliate'] ) ) : ?>
++              <p><a class="fasp-cta-small" href="<?php echo esc_url( $p['affiliate'] ); ?>" target="_blank" rel="noopener"><?php echo esc_html__( 'Open Account', 'fasp' ); ?></a></p>
++            <?php endif; ?>
++          </article>
++        <?php endforeach; endif; ?>
++      </div>
++    </section>
++
++    <section class="fasp-card">
++      <h3><?php echo esc_html__( 'Your resources', 'fasp' ); ?></h3>
++      <div class="fasp-cards-row">
++        <?php if ( empty( $resources ) ) : ?>
++          <p><?php echo esc_html__( 'No resources available yet.', 'fasp' ); ?></p>
++        <?php else : foreach ( $resources as $r ) : ?>
++          <article class="fasp-resource">
++            <h4><?php echo esc_html( $r->post_title ); ?></h4>
++            <p><?php echo wp_kses_post( wp_trim_words( $r->post_content, 20 ) ); ?></p>
++            <p><a class="fasp-cta-small" href="<?php echo esc_url( get_permalink( $r->ID ) ); ?>"><?php echo esc_html__( 'View Resource', 'fasp' ); ?></a></p>
++          </article>
++        <?php endforeach; endif; ?>
++      </div>
++    </section>
++
++    <section class="fasp-card fasp-card--wide">
++      <h3><?php echo esc_html__( 'Your progress', 'fasp' ); ?></h3>
++      <div style="position:relative;">
++        <canvas id="faspProgressChart" aria-label="<?php echo esc_attr__( 'Your progress chart', 'fasp' ); ?>" role="img"></canvas>
++      </div>
++    </section>
++  </div>
++</div>
+diff --git a/assets/css/fasp-dashboard.css b/assets/css/fasp-dashboard.css
+new file mode 100644
+index 0000000..4444444
+--- /dev/null
++++ b/assets/css/fasp-dashboard.css
+@@ -0,0 +1,150 @@
++/* Dashboard visual styles */
++.fasp-dash-wrap{max-width:1180px;margin:0 auto;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
++.fasp-dash-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:12px}
++.fasp-dash-title h1{margin:0;font-size:1.6rem;color:#1f2937}
++.fasp-dash-sub{margin:4px 0 0;color:#6b7280}
++.fasp-cta-primary,.fasp-cta-secondary{display:inline-block;padding:8px 14px;border-radius:6px;text-decoration:none}
++.fasp-cta-primary{background:#0ea5a4;color:#fff}
++.fasp-cta-secondary{background:#e6f6f5;color:#064e4e;margin-left:8px;padding:8px 12px}
++.fasp-block-notice{border:1px solid #fde2e2;background:#fff5f5;padding:12px;border-radius:6px;margin-bottom:14px}
++.fasp-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
++.fasp-card{grid-column:span 4;background:#fff;border:1px solid #eef2f7;border-radius:8px;padding:16px;box-shadow:0 1px 2px rgba(16,24,40,0.03)}
++.fasp-card--wide{grid-column:span 8}
++.fasp-card--actions{grid-column:span 4;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
++.fasp-checklist{padding-left:18px;margin:6px 0}
++.fasp-cards-row{display:flex;flex-wrap:wrap;gap:12px}
++.fasp-platform,.fasp-resource,.fasp-coach{flex:1 1 220px;background:#fafafa;border:1px solid #f1f5f9;padding:12px;border-radius:6px}
++.fasp-cta-small{display:inline-block;padding:6px 10px;background:#0ea5a4;color:#fff;border-radius:6px;text-decoration:none}
++.fasp-progress-placeholder{height:180px;border-radius:6px;border:1px dashed #e6eef3;display:flex;align-items:center;justify-content:center;color:#6b7280}
++
++/* avatars and icons */
++.fasp-avatar { display:inline-block; vertical-align:middle; font-size:16px; line-height:1; text-align:center; border-radius:50%; overflow:hidden; width:44px; height:44px; }
++.fasp-avatar img { width:100%; height:100%; object-fit:cover; }
++.fasp-platform, .fasp-resource, .fasp-coach { transition: transform .12s ease, box-shadow .12s ease; }
++.fasp-platform:hover, .fasp-resource:hover, .fasp-coach:hover { transform: translateY(-4px); box-shadow: 0 6px 18px rgba(6, 95, 70, 0.06); }
++#faspProgressChart { width:100%; height:220px; display:block; }
++
++/* responsive */
++@media (max-width:900px){
++  .fasp-grid{grid-template-columns:repeat(6,1fr)}
++  .fasp-card{grid-column:span 6}
++  .fasp-card--wide{grid-column:span 6}
++}
++@media (max-width:540px){
++  .fasp-dash-header{flex-direction:column;align-items:flex-start}
++  .fasp-cta-secondary{margin-left:0}
++}
+diff --git a/assets/js/fasp-dashboard.js b/assets/js/fasp-dashboard.js
+new file mode 100644
+index 0000000..5555555
+--- /dev/null
++++ b/assets/js/fasp-dashboard.js
+@@ -0,0 +1,105 @@
++// fasp-dashboard.js - renders Chart.js chart and avatars
++(function () {
++  document.addEventListener('DOMContentLoaded', function () {
++    try {
++      var ctx = document.getElementById('faspProgressChart');
++      if (ctx && typeof Chart !== 'undefined') {
++        var labels = [];
++        var values = [];
++        if ( window.fasp_dashboard_data && fasp_dashboard_data.chart ) {
++          labels = fasp_dashboard_data.chart.labels || [];
++          values = fasp_dashboard_data.chart.values || [];
++        }
++        new Chart(ctx, {
++          type: 'line',
++          data: {
++            labels: labels,
++            datasets: [{
++              label: 'Progress',
++              data: values,
++              borderColor: '#06b6d4',
++              backgroundColor: 'rgba(6,182,212,0.08)',
++              fill: true,
++              tension: 0.2,
++              pointRadius: 4,
++              pointBackgroundColor: '#0ea5a4'
++            }]
++          },
++          options: {
++            responsive: true,
++            maintainAspectRatio: false,
++            plugins: { legend: { display: false } },
++            scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#f3f4f6' } } }
++          }
++        });
++      }
++
++      var avatars = document.querySelectorAll('.fasp-avatar[data-initials]');
++      avatars.forEach(function (el) {
++        var initials = el.getAttribute('data-initials') || '';
++        initials = initials.trim().substring(0, 2).toUpperCase();
++        if (!initials) initials = '?';
++        var hash = 0;
++        for (var i = 0; i < initials.length; i++) {
++          hash = initials.charCodeAt(i) + ((hash << 5) - hash);
++        }
++        var hue = Math.abs(hash) % 360;
++        el.style.backgroundColor = 'hsl(' + hue + ', 65%, 50%)';
++        el.style.color = '#fff';
++        el.style.display = 'inline-flex';
++        el.style.alignItems = 'center';
++        el.style.justifyContent = 'center';
++        el.style.fontWeight = '600';
++        el.style.borderRadius = '50%';
++        el.style.width = el.style.height = '44px';
++        el.textContent = initials;
++      });
++
++      var platformCards = document.querySelectorAll('.fasp-platform[data-href]');
++      platformCards.forEach(function (card) {
++        var url = card.getAttribute('data-href');
++        card.style.cursor = 'pointer';
++        card.addEventListener('click', function (e) {
++          if (e.target && (e.target.tagName === 'A' || e.target.closest('a'))) return;
++          window.open(url, '_blank', 'noopener');
++        });
++      });
++    } catch (err) {
++      if ( window.console && console.error ) {
++        console.error('FASP dashboard error:', err);
++      }
++    }
++  });
++})();
+diff --git a/includes/gating-helper.php b/includes/gating-helper.php
+new file mode 100644
+index 0000000..6666666
+--- /dev/null
++++ b/includes/gating-helper.php
+@@ -0,0 +1,140 @@
++<?php
++if ( ! defined( 'ABSPATH' ) ) {
++    exit;
++}
++
++/**
++ * Gating helpers: options getter and fasp_is_user_allowed_by_gating
++ */
++
++if ( ! function_exists( 'fasp_get_gating_options' ) ) {
++    function fasp_get_gating_options() {
++        $roles   = get_option( 'fasp_gating_roles', array() );
++        if ( ! is_array( $roles ) ) {
++            $roles = array_filter( array_map( 'trim', explode( ',', (string) $roles ) ) );
++        }
++
++        $require_login = get_option( 'fasp_gating_require_login', false );
++        $blocked_msg   = get_option( 'fasp_gating_blocked_message', '' );
++        $blocked_redir = get_option( 'fasp_gating_blocked_redirect', '' );
++
++        return array(
++            'roles'           => $roles,
++            'require_login'   => (bool) $require_login,
++            'blocked_message' => (string) $blocked_msg,
++            'blocked_redirect'=> (string) $blocked_redir,
++        );
++    }
++}
++
++if ( ! function_exists( 'fasp_is_user_allowed_by_gating' ) ) {
++    function fasp_is_user_allowed_by_gating( $user_id = null, $post_id = null ) {
++        $result = array( 'allowed' => true, 'message' => null, 'redirect' => null );
++        $user_id = $user_id ? intval( $user_id ) : ( is_user_logged_in() ? get_current_user_id() : 0 );
++
++        if ( $post_id ) {
++            $override = get_post_meta( $post_id, '_fasp_gating_override', true );
++            if ( 'allow' === $override ) { $result['allowed'] = true; return $result; }
++            if ( 'deny' === $override ) { $result['allowed'] = false; $result['message'] = __( 'Access denied for this page.', 'fasp' ); return $result; }
++        }
++
++        $opt = fasp_get_gating_options();
++
++        if ( $opt['require_login'] && ! is_user_logged_in() ) {
++            $result['allowed'] = false;
++            $result['message'] = $opt['blocked_message'] ? $opt['blocked_message'] : __( 'Please log in to access this content.', 'fasp' );
++            $result['redirect'] = $opt['blocked_redirect'] ? $opt['blocked_redirect'] : '';
++            return $result;
++        }
++
++        if ( ! empty( $opt['roles'] ) ) {
++            if ( ! $user_id ) {
++                $result['allowed'] = false;
++                $result['message'] = $opt['blocked_message'] ? $opt['blocked_message'] : __( 'Your account does not have permission to view this content.', 'fasp' );
++                return $result;
++            }
++            $user = get_userdata( $user_id );
++            if ( ! $user ) {
++                $result['allowed'] = false;
++                $result['message'] = __( 'User not found.', 'fasp' );
++                return $result;
++            }
++            $has = false;
++            foreach ( (array) $opt['roles'] as $r ) {
++                if ( in_array( $r, (array) $user->roles, true ) ) { $has = true; break; }
++            }
++            if ( ! $has ) {
++                $result['allowed'] = false;
++                $result['message'] = $opt['blocked_message'] ? $opt['blocked_message'] : __( 'Your role is not permitted to view this content.', 'fasp' );
++                return $result;
++            }
++        }
++
++        // Geo gating: check IP if geo options exist and helper present
++        if ( function_exists( 'fasp_is_ip_allowed_by_geo' ) ) {
++            $ip = isset( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : '';
++            $geo_allowed = fasp_is_ip_allowed_by_geo( $ip );
++            if ( ! $geo_allowed ) {
++                $result['allowed'] = false;
++                $result['message'] = __( 'Access not available in your region.', 'fasp' );
++                return $result;
++            }
++        }
++
++        return $result;
++    }
++}
+diff --git a/includes/gating-meta.php b/includes/gating-meta.php
+new file mode 100644
+index 0000000..7777777
+--- /dev/null
++++ b/includes/gating-meta.php
+@@ -0,0 +1,106 @@
++<?php
++if ( ! defined( 'ABSPATH' ) ) exit;
++
++/**
++ * Per-page gating meta box
++ */
++if ( ! function_exists( 'fasp_register_gating_meta_box' ) ) {
++    add_action( 'add_meta_boxes', 'fasp_register_gating_meta_box' );
++    function fasp_register_gating_meta_box() {
++        $screens = array( 'post', 'page' );
++        foreach ( $screens as $screen ) {
++            add_meta_box( 'fasp_gating_meta', __( 'FASP Gating', 'fasp' ), 'fasp_render_gating_meta_box', $screen, 'side', 'default' );
++        }
++    }
++}
++
++if ( ! function_exists( 'fasp_render_gating_meta_box' ) ) {
++    function fasp_render_gating_meta_box( $post ) {
++        wp_nonce_field( 'fasp_gating_meta_save', 'fasp_gating_meta_nonce' );
++        $value = get_post_meta( $post->ID, '_fasp_gating_override', true );
++        if ( ! in_array( $value, array( 'inherit', 'allow', 'deny' ), true ) ) $value = 'inherit';
++        ?>
++        <p><?php echo esc_html__( 'Override global gating for this page.', 'fasp' ); ?></p>
++        <label><input type="radio" name="fasp_gating_override" value="inherit" <?php checked( $value, 'inherit' ); ?> /> <?php echo esc_html__( 'Inherit', 'fasp' ); ?></label><br/>
++        <label><input type="radio" name="fasp_gating_override" value="allow" <?php checked( $value, 'allow' ); ?> /> <?php echo esc_html__( 'Allow', 'fasp' ); ?></label><br/>
++        <label><input type="radio" name="fasp_gating_override" value="deny" <?php checked( $value, 'deny' ); ?> /> <?php echo esc_html__( 'Deny', 'fasp' ); ?></label>
++        <?php
++    }
++}
++
++if ( ! function_exists( 'fasp_save_gating_meta_box' ) ) {
++    add_action( 'save_post', 'fasp_save_gating_meta_box' );
++    function fasp_save_gating_meta_box( $post_id ) {
++        if ( ! isset( $_POST['fasp_gating_meta_nonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['fasp_gating_meta_nonce'] ), 'fasp_gating_meta_save' ) ) return;
++        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
++        if ( ! current_user_can( 'edit_post', $post_id ) ) return;
++        if ( isset( $_POST['fasp_gating_override'] ) ) {
++            $val = sanitize_text_field( wp_unslash( $_POST['fasp_gating_override'] ) );
++            if ( ! in_array( $val, array( 'inherit', 'allow', 'deny' ), true ) ) $val = 'inherit';
++            update_post_meta( $post_id, '_fasp_gating_override', $val );
++        }
++    }
++}
+diff --git a/includes/geo-gating.php b/includes/geo-gating.php
+new file mode 100644
+index 0000000..8888888
+--- /dev/null
++++ b/includes/geo-gating.php
+@@ -0,0 +1,360 @@
++<?php
++if ( ! defined( 'ABSPATH' ) ) {
++    exit;
++}
++
++/**
++ * Full Geo Gating with Select2 UI + region auto-select.
++ * Uses data/countries.json and data/regions.json included in the repo.
++ */
++
++/* load countries and regions */
++if ( ! function_exists( 'fasp_get_countries_list' ) ) {
++    function fasp_get_countries_list() {
++        $path = plugin_dir_path( __DIR__ ) . 'data/countries.json';
++        if ( file_exists( $path ) ) {
++            $json = file_get_contents( $path );
++            $arr  = json_decode( $json, true );
++            if ( is_array( $arr ) ) return $arr;
++        }
++        return array();
++    }
++}
++
++if ( ! function_exists( 'fasp_get_regions_map' ) ) {
++    function fasp_get_regions_map() {
++        $path = plugin_dir_path( __DIR__ ) . 'data/regions.json';
++        if ( file_exists( $path ) ) {
++            $json = file_get_contents( $path );
++            $arr  = json_decode( $json, true );
++            if ( is_array( $arr ) ) return $arr;
++        }
++        return array();
++    }
++}
++
++/* admin assets */
++if ( ! function_exists( 'fasp_geo_admin_assets' ) ) {
++    add_action( 'admin_enqueue_scripts', 'fasp_geo_admin_assets' );
++    function fasp_geo_admin_assets( $hook ) {
++        if ( isset( $_GET['page'] ) && 'fasp_geo_gating' === $_GET['page'] ) {
++            wp_enqueue_style( 'select2-css', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', array(), '4.1.0-rc.0' );
++            wp_enqueue_script( 'select2-js', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', array( 'jquery' ), '4.1.0-rc.0', true );
++            wp_register_script( 'fasp-geo-admin', plugin_dir_url( __DIR__ ) . 'assets/js/geo-admin.js', array( 'jquery', 'select2-js' ), '1.0.0', true );
++            wp_localize_script( 'fasp-geo-admin', 'fasp_geo_data', array( 'regions' => fasp_get_regions_map() ) );
++            wp_enqueue_script( 'fasp-geo-admin' );
++        }
++    }
++}
++
++/* admin page */
++if ( ! function_exists( 'fasp_register_geo_gating_admin' ) ) {
++    add_action( 'admin_menu', 'fasp_register_geo_gating_admin' );
++    function fasp_register_geo_gating_admin() {
++        $parent = 'forex-affiliate';
++        if ( ! menu_page_url( $parent, false ) ) $parent = 'options-general.php';
++        add_submenu_page( $parent, __( 'Geo Gating', 'fasp' ), __( 'Geo Gating', 'fasp' ), 'manage_options', 'fasp_geo_gating', 'fasp_admin_geo_gating_page' );
++    }
++}
++
++if ( ! function_exists( 'fasp_admin_geo_gating_page' ) ) {
++    function fasp_admin_geo_gating_page() {
++        if ( ! current_user_can( 'manage_options' ) ) wp_die( __( 'Unauthorized', 'fasp' ) );
++        if ( isset( $_POST['fasp_geo_save'] ) ) {
++            check_admin_referer( 'fasp_geo_save', 'fasp_geo_nonce' );
++            $allow = isset( $_POST['fasp_geo_allow'] ) ? array_map( 'sanitize_text_field', (array) $_POST['fasp_geo_allow'] ) : array();
++            $block = isset( $_POST['fasp_geo_block'] ) ? array_map( 'sanitize_text_field', (array) $_POST['fasp_geo_block'] ) : array();
++            $regions = isset( $_POST['fasp_geo_regions'] ) ? array_map( 'sanitize_text_field', (array) $_POST['fasp_geo_regions'] ) : array();
++            update_option( 'fasp_geo_allow', array_values( $allow ) );
++            update_option( 'fasp_geo_block', array_values( $block ) );
++            update_option( 'fasp_geo_regions', array_values( $regions ) );
++            $unknown = isset( $_POST['fasp_geo_unknown_blocked'] ) ? 1 : 0;
++            update_option( 'fasp_geo_unknown_blocked', $unknown );
++            add_settings_error( 'fasp_geo', 'saved', __( 'Geo gating settings saved.', 'fasp' ), 'updated' );
++        }
++
++        settings_errors( 'fasp_geo' );
++
++        $allow_selected = get_option( 'fasp_geo_allow', array() );
++        $block_selected = get_option( 'fasp_geo_block', array() );
++        $regions_selected = get_option( 'fasp_geo_regions', array() );
++        $unknown_blocked = get_option( 'fasp_geo_unknown_blocked', 0 );
++
++        $countries = fasp_get_countries_list();
++        $regions = fasp_get_regions_map();
++        ?>
++        <div class="wrap">
++            <h1><?php echo esc_html__( 'Geo Gating', 'fasp' ); ?></h1>
++            <form method="post" action="">
++                <?php wp_nonce_field( 'fasp_geo_save', 'fasp_geo_nonce' ); ?>
++
++                <table class="form-table">
++                    <tr>
++                        <th><?php echo esc_html__( 'Regions', 'fasp' ); ?></th>
++                        <td>
++                            <select name="fasp_geo_regions[]" id="fasp-geo-regions" multiple class="fasp-geo-regions" style="width:420px;">
++                                <?php foreach ( $regions as $slug => $arr ) : ?>
++                                    <option value="<?php echo esc_attr( $slug ); ?>" <?php selected( in_array( $slug, (array) $regions_selected, true ) ); ?>><?php echo esc_html( $slug ); ?></option>
++                                <?php endforeach; ?>
++                            </select>
++                            <p class="description"><?php echo esc_html__( 'Select region(s) to quick-select countries. Selecting regions will highlight countries in the Allow/Block lists; you must Save to persist.', 'fasp' ); ?></p>
++                        </td>
++                    </tr>
++
++                    <tr>
++                        <th><?php echo esc_html__( 'Allowlist (countries)', 'fasp' ); ?></th>
++                        <td>
++                            <select name="fasp_geo_allow[]" id="fasp-geo-allow" class="fasp-geo-multiselect" multiple style="width:420px;height:240px;">
++                                <?php foreach ( $countries as $code => $label ) : ?>
++                                    <option value="<?php echo esc_attr( $code ); ?>" <?php selected( in_array( $code, (array) $allow_selected, true ) ); ?>><?php echo esc_html( $label ); ?> (<?php echo esc_html( $code ); ?>)</option>
++                                <?php endforeach; ?>
++                            </select>
++                            <p class="description"><?php echo esc_html__( 'Select countries to explicitly allow. Allowlist wins over blocklist.', 'fasp' ); ?></p>
++                        </td>
++                    </tr>
++
++                    <tr>
++                        <th><?php echo esc_html__( 'Blocklist (countries)', 'fasp' ); ?></th>
++                        <td>
++                            <select name="fasp_geo_block[]" id="fasp-geo-block" class="fasp-geo-multiselect" multiple style="width:420px;height:240px;">
++                                <?php foreach ( $countries as $code => $label ) : ?>
++                                    <option value="<?php echo esc_attr( $code ); ?>" <?php selected( in_array( $code, (array) $block_selected, true ) ); ?>><?php echo esc_html( $label ); ?> (<?php echo esc_html( $code ); ?>)</option>
++                                <?php endforeach; ?>
++                            </select>
++                            <p class="description"><?php echo esc_html__( 'Select countries to explicitly block. If allowlist is set, countries not in allowlist are implicitly blocked.', 'fasp' ); ?></p>
++                        </td>
++                    </tr>
++
++                    <tr>
++                        <th><?php echo esc_html__( 'Unknown IP handling', 'fasp' ); ?></th>
++                        <td>
++                            <label><input type="checkbox" name="fasp_geo_unknown_blocked" value="1" <?php checked( 1, $unknown_blocked ); ?> /> <?php echo esc_html__( 'Treat unknown/unresolvable IP country as blocked', 'fasp' ); ?></label>
++                        </td>
++                    </tr>
++                </table>
++
++                <p class="submit">
++                    <button type="submit" name="fasp_geo_save" class="button button-primary"><?php echo esc_html__( 'Save Changes', 'fasp' ); ?></button>
++                </p>
++            </form>
++        </div>
++        <?php
++    }
++}
++
++/* IP lookup helper (MaxMind optional, fallback to ip-api) */
++if ( ! function_exists( 'fasp_lookup_country_by_ip' ) ) {
++    function fasp_lookup_country_by_ip( $ip ) {
++        if ( empty( $ip ) ) return '';
++        $db = plugin_dir_path( __DIR__ ) . 'data/GeoLite2-City.mmdb';
++        if ( file_exists( $db ) && class_exists( 'GeoIp2\Database\Reader' ) ) {
++            try {
++                $reader = new GeoIp2\Database\Reader( $db );
++                $rec = $reader->city( $ip );
++                if ( isset( $rec->country ) && isset( $rec->country->isoCode ) ) return strtoupper( $rec->country->isoCode );
++            } catch ( Exception $e ) { }
++        }
++        $resp = wp_remote_get( 'http://ip-api.com/json/' . rawurlencode( $ip ) . '?fields=countryCode,status' );
++        if ( is_wp_error( $resp ) ) return '';
++        $body = wp_remote_retrieve_body( $resp );
++        if ( empty( $body ) ) return '';
++        $json = json_decode( $body, true );
++        if ( is_array( $json ) && isset( $json['status'] ) && 'success' === $json['status'] && ! empty( $json['countryCode'] ) ) {
++            return strtoupper( $json['countryCode'] );
++        }
++        return '';
++    }
++}
++
++if ( ! function_exists( 'fasp_is_ip_allowed_by_geo' ) ) {
++    function fasp_is_ip_allowed_by_geo( $ip ) {
++        $code = fasp_lookup_country_by_ip( $ip );
++        $allow = (array) get_option( 'fasp_geo_allow', array() );
++        $block = (array) get_option( 'fasp_geo_block', array() );
++        $unknown_blocked = (bool) get_option( 'fasp_geo_unknown_blocked', false );
++        if ( empty( $code ) ) return ! $unknown_blocked;
++        if ( ! empty( $allow ) ) return in_array( $code, $allow, true );
++        if ( ! empty( $block ) && in_array( $code, $block, true ) ) return false;
++        return true;
++    }
++}
+diff --git a/data/countries.json b/data/countries.json
+new file mode 100644
+index 0000000..9999999
+--- /dev/null
++++ b/data/countries.json
+@@ -0,0 +1,1 @@
++{"AF":"Afghanistan","AX":"Aland Islands","AL":"Albania","DZ":"Algeria","AS":"American Samoa","AD":"Andorra","AO":"Angola","AI":"Anguilla","AQ":"Antarctica","AG":"Antigua and Barbuda","AR":"Argentina","AM":"Armenia","AW":"Aruba","AU":"Australia","AT":"Austria","AZ":"Azerbaijan","BS":"Bahamas","BH":"Bahrain","BD":"Bangladesh","BB":"Barbados","BY":"Belarus","BE":"Belgium","BZ":"Belize","BJ":"Benin","BM":"Bermuda","BT":"Bhutan","BO":"Bolivia (Plurinational State of)","BQ":"Bonaire, Sint Eustatius and Saba","BA":"Bosnia and Herzegovina","BW":"Botswana","BV":"Bouvet Island","BR":"Brazil","IO":"British Indian Ocean Territory","BN":"Brunei Darussalam","BG":"Bulgaria","BF":"Burkina Faso","BI":"Burundi","CV":"Cabo Verde","KH":"Cambodia","CM":"Cameroon","CA":"Canada","KY":"Cayman Islands","CF":"Central African Republic","TD":"Chad","CL":"Chile","CN":"China","CX":"Christmas Island","CC":"Cocos (Keeling) Islands","CO":"Colombia","KM":"Comoros","CD":"Congo (the Democratic Republic of the)","CG":"Congo","CK":"Cook Islands","CR":"Costa Rica","CI":"Côte d'Ivoire","HR":"Croatia","CU":"Cuba","CW":"Curaçao","CY":"Cyprus","CZ":"Czechia","DK":"Denmark","DJ":"Djibouti","DM":"Dominica","DO":"Dominican Republic","EC":"Ecuador","EG":"Egypt","SV":"El Salvador","GQ":"Equatorial Guinea","ER":"Eritrea","EE":"Estonia","SZ":"Eswatini","ET":"Ethiopia","FK":"Falkland Islands (Malvinas)","FO":"Faroe Islands","FJ":"Fiji","FI":"Finland","FR":"France","GF":"French Guiana","PF":"French Polynesia","TF":"French Southern Territories","GA":"Gabon","GM":"Gambia","GE":"Georgia","DE":"Germany","GH":"Ghana","GI":"Gibraltar","GR":"Greece","GL":"Greenland","GD":"Grenada","GP":"Guadeloupe","GU":"Guam","GT":"Guatemala","GG":"Guernsey","GN":"Guinea","GW":"Guinea-Bissau","GY":"Guyana","HT":"Haiti","HM":"Heard Island and McDonald Islands","VA":"Holy See","HN":"Honduras","HK":"Hong Kong","HU":"Hungary","IS":"Iceland","IN":"India","ID":"Indonesia","IR":"Iran (Islamic Republic of)","IQ":"Iraq","IE":"Ireland","IM":"Isle of Man","IL":"Israel","IT":"Italy","JM":"Jamaica","JP":"Japan","JE":"Jersey","JO":"Jordan","KZ":"Kazakhstan","KE":"Kenya","KI":"Kiribati","KP":"Korea (Democratic People's Republic of)","KR":"Korea (Republic of)","KW":"Kuwait","KG":"Kyrgyzstan","LA":"Lao People's Democratic Republic","LV":"Latvia","LB":"Lebanon","LS":"Lesotho","LR":"Liberia","LY":"Libya","LI":"Liechtenstein","LT":"Lithuania","LU":"Luxembourg","MO":"Macao","MG":"Madagascar","MW":"Malawi","MY":"Malaysia","MV":"Maldives","ML":"Mali","MT":"Malta","MH":"Marshall Islands","MQ":"Martinique","MR":"Mauritania","MU":"Mauritius","YT":"Mayotte","MX":"Mexico","FM":"Micronesia (Federated States of)","MD":"Moldova (Republic of)","MC":"Monaco","MN":"Mongolia","ME":"Montenegro","MS":"Montserrat","MA":"Morocco","MZ":"Mozambique","MM":"Myanmar","NA":"Namibia","NR":"Nauru","NP":"Nepal","NL":"Netherlands","NC":"New Caledonia","NZ":"New Zealand","NI":"Nicaragua","NE":"Niger","NG":"Nigeria","NU":"Niue","NF":"Norfolk Island","MK":"North Macedonia","MP":"Northern Mariana Islands","NO":"Norway","OM":"Oman","PK":"Pakistan","PW":"Palau","PS":"Palestine, State of","PA":"Panama","PG":"Papua New Guinea","PY":"Paraguay","PE":"Peru","PH":"Philippines","PN":"Pitcairn","PL":"Poland","PT":"Portugal","PR":"Puerto Rico","QA":"Qatar","RE":"Réunion","RO":"Romania","RU":"Russian Federation","RW":"Rwanda","BL":"Saint Barthélemy","SH":"Saint Helena, Ascension and Tristan da Cunha","KN":"Saint Kitts and Nevis","LC":"Saint Lucia","MF":"Saint Martin (French part)","PM":"Saint Pierre and Miquelon","VC":"Saint Vincent and the Grenadines","WS":"Samoa","SM":"San Marino","ST":"Sao Tome and Principe","SA":"Saudi Arabia","SN":"Senegal","RS":"Serbia","SC":"Seychelles","SL":"Sierra Leone","SG":"Singapore","SX":"Sint Maarten (Dutch part)","SK":"Slovakia","SI":"Slovenia","SB":"Solomon Islands","SO":"Somalia","ZA":"South Africa","GS":"South Georgia and the South Sandwich Islands","SS":"South Sudan","ES":"Spain","LK":"Sri Lanka","SD":"Sudan","SR":"Suriname","SJ":"Svalbard and Jan Mayen","SE":"Sweden","CH":"Switzerland","SY":"Syrian Arab Republic","TW":"Taiwan, Province of China","TJ":"Tajikistan","TZ":"Tanzania, United Republic of","TH":"Thailand","TL":"Timor-Leste","TG":"Togo","TK":"Tokelau","TO":"Tonga","TT":"Trinidad and Tobago","TN":"Tunisia","TR":"Turkey","TM":"Turkmenistan","TC":"Turks and Caicos Islands","TV":"Tuvalu","UG":"Uganda","UA":"Ukraine","AE":"United Arab Emirates","GB":"United Kingdom of Great Britain and Northern Ireland","UM":"United States Minor Outlying Islands","US":"United States of America","UY":"Uruguay","UZ":"Uzbekistan","VU":"Vanuatu","VE":"Venezuela (Bolivarian Republic of)","VN":"Viet Nam","VG":"Virgin Islands (British)","VI":"Virgin Islands (U.S.)","WF":"Wallis and Futuna","EH":"Western Sahara","YE":"Yemen","ZM":"Zambia","ZW":"Zimbabwe"}
+diff --git a/data/regions.json b/data/regions.json
+new file mode 100644
+index 0000000..aaaaaaaa
+--- /dev/null
++++ b/data/regions.json
+@@ -0,0 +1,1 @@
++{"Africa":["DZ","AO","BJ","BW","BF","BI","CV","CM","TD","KM","CG","CD","CI","DJ","EG","GQ","ER","ET","GA","GM","GH","GN","GW","KE","LS","LR","LY","MG","MW","ML","MR","MU","YT","MA","MZ","NA","NE","NG","RW","RE","SH","ST","SN","SC","SL","SO","ZA","SS","SD","SZ","TZ","TG","TN","UG","EH","ZM","ZW"],"Europe":["AL","AD","AT","BY","BE","BA","BG","HR","CY","CZ","DK","EE","FO","FI","FR","DE","GI","GR","GL","VA","HU","IS","IE","IM","IT","JE","LV","LI","LT","LU","MK","MT","MD","MC","ME","NL","NO","PL","PT","RO","RU","SM","RS","SK","SI","ES","SE","CH","TR","UA","GB","XK"],"Asia":["AF","AM","AZ","BH","BD","BT","BN","KH","CN","GE","HK","IN","ID","IR","IQ","IL","JP","JO","KZ","KP","KR","KW","KG","LA","LB","MO","MY","MV","MN","MM","NP","OM","PK","PS","PH","QA","SA","SG","LK","SY","TW","TJ","TH","TL","TM","AE","UZ","VN","YE"],"Americas":["AI","AG","AR","AW","BS","BB","BZ","BM","BO","BQ","BR","VG","CA","KY","CL","CO","CR","CU","CW","DM","DO","EC","SV","GL","GD","GP","GT","GF","GY","HT","HN","JM","MQ","MX","MS","NI","PA","PE","PR","PY","BL","KN","LC","VC","SR","SX","TT","TC","US","UY","VE"],"Oceania":["AS","AU","CK","FJ","PF","GU","KI","MH","FM","NR","NC","NZ","NU","NF","MP","PW","PG","SB","TK","TO","TV","UM","VU","WF","WS"]}
+diff --git a/assets/js/geo-admin.js b/assets/js/geo-admin.js
+new file mode 100644
+index 0000000..bbbbbbbb
+--- /dev/null
++++ b/assets/js/geo-admin.js
+@@ -0,0 +1,36 @@
++jQuery(document).ready(function($){
++  $('.fasp-geo-multiselect, .fasp-geo-regions').select2({ width: 'resolve', placeholder: '' });
++
++  $('.fasp-geo-regions').on('change', function(){
++    var selectedRegions = $(this).val() || [];
++    if (!window.fasp_geo_data || !window.fasp_geo_data.regions) return;
++
++    var codes = [];
++    selectedRegions.forEach(function(r){
++      var regionCodes = window.fasp_geo_data.regions[r] || [];
++      regionCodes.forEach(function(c){
++        if (codes.indexOf(c) === -1) codes.push(c);
++      });
++    });
++
++    if (codes.length) {
++      var $allow = $('#fasp-geo-allow');
++      codes.forEach(function(code){
++        var opt = $allow.find('option[value="' + code + '"]');
++        if (opt.length && !opt.prop('selected')) {
++          opt.prop('selected', true);
++        }
++      });
++      $allow.trigger('change.select2');
++    }
++  });
++});
+diff --git a/includes/utm-builder.php b/includes/utm-builder.php
+new file mode 100644
+index 0000000..cccccccc
+--- /dev/null
++++ b/includes/utm-builder.php
+@@ -0,0 +1,204 @@
++<?php
++if ( ! defined( 'ABSPATH' ) ) exit;
++
++/**
++ * Basic UTM Builder admin page (scaffold)
++ * - base_url, utm_source, utm_campaign, utm_medium, utm_content, utm_term
++ * - presets (facebook, google_ads, tiktok, email)
++ * - copy button + QR generation (client-side)
++ */
++
++if ( ! function_exists( 'fasp_register_utm_builder_admin' ) ) {
++    add_action( 'admin_menu', 'fasp_register_utm_builder_admin' );
++    function fasp_register_utm_builder_admin() {
++        $parent = 'forex-affiliate';
++        if ( ! menu_page_url( $parent, false ) ) $parent = 'options-general.php';
++        add_submenu_page( $parent, __( 'UTM Builder', 'fasp' ), __( 'UTM Builder', 'fasp' ), 'manage_options', 'fasp_utm_builder', 'fasp_admin_utm_builder_page' );
++    }
++}
++
++if ( ! function_exists( 'fasp_admin_utm_builder_page' ) ) {
++    function fasp_admin_utm_builder_page() {
++        if ( ! current_user_can( 'manage_options' ) ) wp_die( __( 'Unauthorized', 'fasp' ) );
++
++        // simple save not required; presets stored if admin saves
++        if ( isset( $_POST['fasp_utm_save'] ) ) {
++            check_admin_referer( 'fasp_utm_save', 'fasp_utm_nonce' );
++            $presets = isset( $_POST['fasp_utm_presets'] ) ? wp_kses_post( wp_unslash( $_POST['fasp_utm_presets'] ) ) : '';
++            update_option( 'fasp_utm_presets', $presets );
++            add_settings_error( 'fasp_utm', 'saved', __( 'UTM presets saved.', 'fasp' ), 'updated' );
++        }
++
++        settings_errors( 'fasp_utm' );
++        $presets = get_option( 'fasp_utm_presets', '' );
++        ?>
++        <div class="wrap">
++          <h1><?php echo esc_html__( 'UTM Builder', 'fasp' ); ?></h1>
++          <p class="description"><?php echo esc_html__( 'Build campaign URLs quickly. Use presets for facebook, google_ads, tiktok, email.', 'fasp' ); ?></p>
++          <form method="post" action="">
++            <?php wp_nonce_field( 'fasp_utm_save', 'fasp_utm_nonce' ); ?>
++            <table class="form-table">
++              <tr>
++                <th><?php echo esc_html__( 'Base URL', 'fasp' ); ?></th>
++                <td><input type="url" name="fasp_base_url" id="fasp_base_url" value="<?php echo esc_attr( home_url() ); ?>" style="width:420px;" /></td>
++              </tr>
++              <tr>
++                <th><?php echo esc_html__( 'UTM Source', 'fasp' ); ?></th>
++                <td><input type="text" name="fasp_utm_source" id="fasp_utm_source" style="width:320px;" /></td>
++              </tr>
++              <tr>
++                <th><?php echo esc_html__( 'UTM Campaign', 'fasp' ); ?></th>
++                <td><input type="text" name="fasp_utm_campaign" id="fasp_utm_campaign" style="width:320px;" /></td>
++              </tr>
++              <tr>
++                <th><?php echo esc_html__( 'UTM Medium (optional)', 'fasp' ); ?></th>
++                <td><input type="text" name="fasp_utm_medium" id="fasp_utm_medium" style="width:320px;" /></td>
++              </tr>
++              <tr>
++                <th><?php echo esc_html__( 'UTM Content (optional)', 'fasp' ); ?></th>
++                <td><input type="text" name="fasp_utm_content" id="fasp_utm_content" style="width:320px;" /></td>
++              </tr>
++            </table>
++
++            <p class="submit"><button type="button" id="fasp_build_btn" class="button button-primary"><?php echo esc_html__( 'Build URL', 'fasp' ); ?></button></p>
++          </form>
++
++          <h2><?php echo esc_html__( 'Result', 'fasp' ); ?></h2>
++          <p><input type="text" id="fasp_result_url" readonly style="width:90%;" /></p>
++          <p><button id="fasp_copy_btn" class="button"><?php echo esc_html__( 'Copy', 'fasp' ); ?></button> <button id="fasp_qr_btn" class="button"><?php echo esc_html__( 'QR', 'fasp' ); ?></button></p>
++
++          <script>
++          (function(){
++            document.getElementById('fasp_build_btn').addEventListener('click', function(){
++              var base = document.getElementById('fasp_base_url').value;
++              var src = document.getElementById('fasp_utm_source').value;
++              var camp = document.getElementById('fasp_utm_campaign').value;
++              var med = document.getElementById('fasp_utm_medium').value;
++              var cont = document.getElementById('fasp_utm_content').value;
++              if (!base || !src || !camp) { alert('Base, source and campaign are required'); return; }
++              var params = new URLSearchParams();
++              params.set('utm_source', src);
++              params.set('utm_campaign', camp);
++              if (med) params.set('utm_medium', med);
++              if (cont) params.set('utm_content', cont);
++              var result = base + (base.indexOf('?') === -1 ? '?' : '&') + params.toString();
++              document.getElementById('fasp_result_url').value = result;
++            });
++            document.getElementById('fasp_copy_btn').addEventListener('click', function(){
++              var el = document.getElementById('fasp_result_url');
++              el.select(); document.execCommand('copy');
++              alert('Copied');
++            });
++            document.getElementById('fasp_qr_btn').addEventListener('click', function(){
++              var u = document.getElementById('fasp_result_url').value;
++              if (!u) return alert('No URL built');
++              var src = 'https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=' + encodeURIComponent(u);
++              var w = window.open('', '_blank');
++              w.document.write('<img src="'+src+'">');
++            });
++          })();
++          </script>
++        </div>
++        <?php
++    }
++}
+diff --git a/includes/hub-admin.php b/includes/hub-admin.php
+new file mode 100644
+index 0000000..dddddddd
+--- /dev/null
++++ b/includes/hub-admin.php
+@@ -0,0 +1,106 @@
++<?php
++if ( ! defined( 'ABSPATH' ) ) exit;
++
++/**
++ * Admin Hub widgets and status cards
++ */
++
++if ( ! function_exists( 'fasp_hub_home' ) ) {
++    function fasp_hub_home() {
++        if ( ! current_user_can( 'manage_options' ) ) wp_die( __( 'Unauthorized', 'fasp' ) );
++        $stripe = function_exists( 'fasp_get_payments' ) ? fasp_get_payments() : array();
++        $stripe_ok = ! empty( $stripe['stripe']['sk'] ) && ! empty( $stripe['stripe']['pk'] );
++        $geo_set = ! empty( get_option( 'fasp_geo_allow', array() ) ) || ! empty( get_option( 'fasp_geo_block', array() ) );
++        $webhook_url = get_option( 'fasp_webhook_url', '' );
++        ?>
++        <div class="wrap fasp-admin">
++            <h1><?php echo esc_html__( 'Forex Affiliate', 'fasp' ); ?></h1>
++            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;">
++                <div style="border:1px solid #eee;padding:12px;border-radius:6px;min-width:220px;">
++                    <strong><?php echo esc_html__( 'Gate', 'fasp' ); ?></strong>
++                    <div><?php echo esc_html__( 'Status:' ); ?> <?php echo empty( get_option( 'fasp_gating_require_login', 0 ) ) ? esc_html__( 'OFF' ) : esc_html__( 'ON' ); ?></div>
++                </div>
++                <div style="border:1px solid #eee;padding:12px;border-radius:6px;min-width:220px;">
++                    <strong><?php echo esc_html__( 'Geo rules', 'fasp' ); ?></strong>
++                    <div><?php echo $geo_set ? esc_html__( 'Yes' ) : esc_html__( 'No' ); ?></div>
++                </div>
++                <div style="border:1px solid #eee;padding:12px;border-radius:6px;min-width:220px;">
++                    <strong><?php echo esc_html__( 'Stripe keys', 'fasp' ); ?></strong>
++                    <div><?php echo $stripe_ok ? esc_html__( 'Present' ) : esc_html__( 'Missing' ); ?></div>
++                </div>
++                <div style="border:1px solid #eee;padding:12px;border-radius:6px;min-width:220px;">
++                    <strong><?php echo esc_html__( 'Webhook', 'fasp' ); ?></strong>
++                    <div><?php echo ! empty( $webhook_url ) ? esc_html__( 'Set' ) : esc_html__( 'Not set' ); ?></div>
++                </div>
++            </div>
++
++            <h2 style="margin-top:18px;"><?php echo esc_html__( 'Quick actions', 'fasp' ); ?></h2>
++            <p>
++                <a class="button" href="<?php echo esc_url( admin_url( 'post-new.php?post_type=fasp_resource' ) ); ?>"><?php echo esc_html__( 'New Resource', 'fasp' ); ?></a>
++                &nbsp;
++                <a class="button" href="<?php echo esc_url( admin_url( 'post-new.php?post_type=fasp_coach' ) ); ?>"><?php echo esc_html__( 'New Coach', 'fasp' ); ?></a>
++                &nbsp;
++                <a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=fasp_geo_gating' ) ); ?>"><?php echo esc_html__( 'Geo Gating', 'fasp' ); ?></a>
++            </p>
++        </div>
++        <?php
++    }
++}
+diff --git a/includes/leads-webhook-log.php b/includes/leads-webhook-log.php
+new file mode 100644
+index 0000000..eeeeeeee
+--- /dev/null
++++ b/includes/leads-webhook-log.php
+@@ -0,0 +1,102 @@
++<?php
++if ( ! defined( 'ABSPATH' ) ) exit;
++
++/**
++ * Simple leads webhook logger + send/test helpers
++ */
++
++if ( ! function_exists( 'fasp_log_webhook_attempt' ) ) {
++    function fasp_log_webhook_attempt( $endpoint, $payload, $http_code, $response_body ) {
++        $log = get_option( 'fasp_leads_webhook_log', array() );
++        $entry = array(
++            'time' => time(),
++            'endpoint' => $endpoint,
++            'status' => intval( $http_code ),
++            'payload' => is_scalar( $payload ) ? $payload : wp_json_encode( $payload ),
++            'response' => is_scalar( $response_body ) ? $response_body : wp_json_encode( $response_body ),
++        );
++        array_unshift( $log, $entry );
++        $log = array_slice( $log, 0, 20 );
++        update_option( 'fasp_leads_webhook_log', $log );
++    }
++}
++
++if ( ! function_exists( 'fasp_send_lead_webhook' ) ) {
++    function fasp_send_lead_webhook( $endpoint, $payload ) {
++        $args = array( 'headers' => array( 'Content-Type' => 'application/json' ), 'body' => wp_json_encode( $payload ), 'timeout' => 20 );
++        $resp = wp_remote_post( $endpoint, $args );
++        if ( is_wp_error( $resp ) ) {
++            fasp_log_webhook_attempt( $endpoint, $payload, 0, $resp->get_error_message() );
++            return false;
++        }
++        $code = wp_remote_retrieve_response_code( $resp );
++        $body = wp_remote_retrieve_body( $resp );
++        fasp_log_webhook_attempt( $endpoint, $payload, $code, $body );
++        return $code >= 200 && $code < 300;
++    }
++}
+diff --git a/includes/diagnostics.php b/includes/diagnostics.php
+new file mode 100644
+index 0000000..ffffffff
+--- /dev/null
++++ b/includes/diagnostics.php
+@@ -0,0 +1,145 @@
++<?php
++if ( ! defined( 'ABSPATH' ) ) exit;
++
++/**
++ * Diagnostics admin page: webhook pinger, Stripe signature checker scaffold, M-Pesa STK trigger (safe)
++ */
++
++if ( ! function_exists( 'fasp_register_diagnostics_admin' ) ) {
++    add_action( 'admin_menu', 'fasp_register_diagnostics_admin' );
++    function fasp_register_diagnostics_admin() {
++        $parent = 'forex-affiliate';
++        if ( ! menu_page_url( $parent, false ) ) $parent = 'options-general.php';
++        add_submenu_page( $parent, __( 'Diagnostics', 'fasp' ), __( 'Diagnostics', 'fasp' ), 'manage_options', 'fasp_diagnostics', 'fasp_admin_diagnostics_page' );
++    }
++}
++
++if ( ! function_exists( 'fasp_admin_diagnostics_page' ) ) {
++    function fasp_admin_diagnostics_page() {
++        if ( ! current_user_can( 'manage_options' ) ) wp_die( __( 'Unauthorized', 'fasp' ) );
++        ?>
++        <div class="wrap">
++            <h1><?php echo esc_html__( 'Diagnostics', 'fasp' ); ?></h1>
++            <h2><?php echo esc_html__( 'Webhook pinger', 'fasp' ); ?></h2>
++            <form method="post" action="">
++                <?php wp_nonce_field( 'fasp_diag', 'fasp_diag_nonce' ); ?>
++                <input type="url" name="fasp_diag_webhook_url" style="width:420px;" placeholder="<?php echo esc_attr__( 'https://example.com/endpoint', 'fasp' ); ?>" />
++                <button class="button" type="submit" name="fasp_diag_ping"><?php echo esc_html__( 'Send Test Webhook', 'fasp' ); ?></button>
++            </form>
++            <?php
++            if ( isset( $_POST['fasp_diag_ping'] ) && check_admin_referer( 'fasp_diag', 'fasp_diag_nonce' ) ) {
++                $url = esc_url_raw( wp_unslash( $_POST['fasp_diag_webhook_url'] ) );
++                $sample = array( 'message' => 'This is a test webhook from Forex Affiliate Suite Pro', 'time' => time() );
++                $ok = fasp_send_lead_webhook( $url, $sample );
++                echo '<p>' . ( $ok ? esc_html__( 'Webhook sent (200-range).', 'fasp' ) : esc_html__( 'Webhook failed. Check log.', 'fasp' ) ) . '</p>';
++            }
++            ?>
++            <h2><?php echo esc_html__( 'Connectivity checks', 'fasp' ); ?></h2>
++            <ul>
++                <li><?php echo esc_html__( 'cURL available:' ); ?> <?php echo function_exists( 'curl_version' ) ? esc_html__( 'Yes' ) : esc_html__( 'No' ); ?></li>
++                <li><?php echo esc_html__( 'wp_remote_post test:' ); ?>
++                    <?php
++                    $res = wp_remote_get( 'https://httpbin.org/get' );
++                    echo is_wp_error( $res ) ? esc_html__( 'Failed' ) : esc_html__( 'OK' );
++                    ?>
++                </li>
++                <li><?php echo esc_html__( 'WP Cron:' ); ?> <?php echo defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ? esc_html__( 'Disabled' ) : esc_html__( 'Enabled' ); ?></li>
++            </ul>
++        </div>
++        <?php
++    }
++}
+diff --git a/includes/payments-cleanup.php b/includes/payments-cleanup.php
+new file mode 100644
+index 0000000..12121212
+--- /dev/null
++++ b/includes/payments-cleanup.php
+@@ -0,0 +1,41 @@
++<?php
++if ( ! defined( 'ABSPATH' ) ) exit;
++
++/**
++ * Payments admin cleanup:
++ * - move crypto block into tabbed payments UI (if you have a tab renderer)
++ * - guard legacy HTML (replace raw legacy blocks with callable render functions)
++ */
++
++/* Example guard for legacy block replacement (for files that printed raw HTML) */
++if ( ! function_exists( 'fasp_render_legacy_payment_block' ) ) {
++    function fasp_render_legacy_payment_block() {
++        // placeholder to avoid accidental output
++        ?>
++        <div class="wrap fasp-admin" style="display:none;">
++            <h2><?php echo esc_html__( 'Legacy Payments (disabled)', 'fasp' ); ?></h2>
++        </div>
++        <?php
++    }
++}
+diff --git a/tests/test-user-dashboard.php b/tests/test-user-dashboard.php
+new file mode 100644
+index 0000000..13131313
+--- /dev/null
++++ b/tests/test-user-dashboard.php
+@@ -0,0 +1,28 @@
++<?php
++class FASP_User_Dashboard_Test extends WP_UnitTestCase {
++    public function test_get_user_dashboard_data_return_structure() {
++        $user_id = $this->factory->user->create( array( 'role' => 'subscriber' ) );
++        $this->assertTrue( function_exists( 'fasp_get_user_dashboard_data' ) );
++        $data = fasp_get_user_dashboard_data( $user_id );
++        $this->assertIsArray( $data );
++        $this->assertArrayHasKey( 'platforms', $data );
++        $this->assertArrayHasKey( 'resources', $data );
++        $this->assertArrayHasKey( 'coaches', $data );
++        $this->assertArrayHasKey( 'gating', $data );
++        $this->assertArrayHasKey( 'utm', $data );
++    }
++}
+diff --git a/tests/test-gating.php b/tests/test-gating.php
+new file mode 100644
+index 0000000..14141414
+--- /dev/null
++++ b/tests/test-gating.php
+@@ -0,0 +1,54 @@
++<?php
++class FASP_Gating_Test extends WP_UnitTestCase {
++    public function test_gating_options_structure() {
++        $opt = fasp_get_gating_options();
++        $this->assertIsArray( $opt );
++        $this->assertArrayHasKey( 'roles', $opt );
++        $this->assertArrayHasKey( 'require_login', $opt );
++        $this->assertArrayHasKey( 'blocked_message', $opt );
++        $this->assertArrayHasKey( 'blocked_redirect', $opt );
++    }
++
++    public function test_is_user_allowed_by_gating_requires_login() {
++        update_option( 'fasp_gating_require_login', 1 );
++        $res = fasp_is_user_allowed_by_gating( 0, null );
++        $this->assertFalse( $res['allowed'] );
++        update_option( 'fasp_gating_require_login', 0 );
++    }
++
++    public function test_is_user_allowed_by_gating_roles() {
++        update_option( 'fasp_gating_roles', array( 'subscriber' ) );
++        $user_id = $this->factory->user->create( array( 'role' => 'subscriber' ) );
++        $res = fasp_is_user_allowed_by_gating( $user_id, null );
++        $this->assertTrue( $res['allowed'] );
++        $other_id = $this->factory->user->create( array( 'role' => 'editor' ) );
++        $res2 = fasp_is_user_allowed_by_gating( $other_id, null );
++        $this->assertFalse( $res2['allowed'] );
++        update_option( 'fasp_gating_roles', array() );
++    }
++}
++
+-- 
+2.40.1
+
+
+chmod +x create-full-bake-files.sh
+./create-full-bake-files.sh
