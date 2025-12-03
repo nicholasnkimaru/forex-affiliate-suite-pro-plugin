@@ -53,59 +53,30 @@ function fasp_visibility_page(){
 }
 
 // --- Payments & Gateways ---
+// Legacy function - now redirects to unified payments admin (fasp_admin_payments_screen in fasp-admin-payments.php)
+// The legacy raw HTML block with separate Crypto section has been removed.
+// All payment settings including Crypto (USDT TRC20/ERC20/BEP20) are now managed
+// through the tabbed interface in the unified Payments screen.
 function fasp_payments_page(){
     if (!current_user_can('manage_options')) return;
-
-    if (isset($_POST['fasp_payments_save']) && check_admin_referer('fasp_payments','fasp_payments_nonce')){
-        $o = array(
-            'paypal_email'       => sanitize_email($_POST['paypal_email'] ?? ''),
-            'paypal_return_url'  => esc_url_raw($_POST['paypal_return_url'] ?? ''),
-            'paypal_cancel_url'  => esc_url_raw($_POST['paypal_cancel_url'] ?? ''),
-            'stripe_pk'          => sanitize_text_field($_POST['stripe_pk'] ?? ''),
-            'stripe_sk'          => sanitize_text_field($_POST['stripe_sk'] ?? ''),
-            'mpesa_till'         => sanitize_text_field($_POST['mpesa_till'] ?? ''),
-            'mpesa_paybill'      => sanitize_text_field($_POST['mpesa_paybill'] ?? ''),
-            'mpesa_callback_url' => esc_url_raw($_POST['mpesa_callback_url'] ?? ''),
-            'crypto_wallet'      => sanitize_text_field($_POST['crypto_wallet'] ?? ''),
-            'bank_details'       => wp_kses_post($_POST['bank_details'] ?? ''),
-        );
-        update_option('fasp_payments', $o);
-        echo '<div class="updated"><p>Payments saved.</p></div>';
+    
+    // Redirect to unified payments screen if the function exists
+    if (function_exists('fasp_admin_payments_screen')) {
+        fasp_admin_payments_screen();
+        return;
     }
-
-    $o = get_option('fasp_payments', array());
-    $def_mpesa_cb = site_url('/?fasp_mpesa_callback=1');
-    $def_pp_ret   = site_url('/?fasp_paypal_return=1');
-    $def_pp_can   = site_url('/?fasp_paypal_cancel=1');
+    
+    // Fallback: show redirect notice if unified screen is not loaded
     ?>
     <div class="wrap fasp-admin">
-        <h1>Payments & Gateways</h1>
+        <h1><?php esc_html_e('Payments & Gateways', 'forex-affiliate-suite-pro'); ?></h1>
         <div class="fasp-wrap fasp-card">
-            <form method="post">
-                <?php wp_nonce_field('fasp_payments','fasp_payments_nonce'); ?>
-
-                <h2>M-Pesa</h2>
-                <p><label>Till Number<br><input class="regular-text" name="mpesa_till" value="<?php echo esc_attr($o['mpesa_till'] ?? ''); ?>"></label></p>
-                <p><label>Paybill Number<br><input class="regular-text" name="mpesa_paybill" value="<?php echo esc_attr($o['mpesa_paybill'] ?? ''); ?>"></label></p>
-                <p><label>Callback URL<br><input class="large-text code" name="mpesa_callback_url" value="<?php echo esc_url($o['mpesa_callback_url'] ?? $def_mpesa_cb); ?>"></label></p>
-
-                <h2>PayPal</h2>
-                <p><label>Email<br><input class="regular-text" name="paypal_email" value="<?php echo esc_attr($o['paypal_email'] ?? ''); ?>"></label></p>
-                <p><label>Return URL<br><input class="large-text code" name="paypal_return_url" value="<?php echo esc_url($o['paypal_return_url'] ?? $def_pp_ret); ?>"></label></p>
-                <p><label>Cancel URL<br><input class="large-text code" name="paypal_cancel_url" value="<?php echo esc_url($o['paypal_cancel_url'] ?? $def_pp_can); ?>"></label></p>
-
-                <h2>Stripe</h2>
-                <p><label>Publishable Key<br><input class="regular-text" name="stripe_pk" value="<?php echo esc_attr($o['stripe_pk'] ?? ''); ?>"></label></p>
-                <p><label>Secret Key<br><input class="regular-text" type="password" name="stripe_sk" value="<?php echo esc_attr($o['stripe_sk'] ?? ''); ?>"></label></p>
-
-                <h2>Crypto</h2>
-                <p><label>USDT/Wallet Address<br><input class="regular-text" name="crypto_wallet" value="<?php echo esc_attr($o['crypto_wallet'] ?? ''); ?>"></label></p>
-
-                <h2>Bank Transfer</h2>
-                <p><label>Bank Details / Instructions<br><textarea class="large-text code" rows="6" name="bank_details"><?php echo esc_textarea($o['bank_details'] ?? ''); ?></textarea></label></p>
-
-                <p><input type="hidden" name="fasp_payments_save" value="1"><button class="button button-primary">Save</button></p>
-            </form>
+            <p><?php esc_html_e('Payment settings have been moved to the unified Payments screen.', 'forex-affiliate-suite-pro'); ?></p>
+            <p>
+                <a href="<?php echo esc_url(admin_url('admin.php?page=fasp_payments')); ?>" class="button button-primary">
+                    <?php esc_html_e('Go to Payments Settings', 'forex-affiliate-suite-pro'); ?>
+                </a>
+            </p>
         </div>
     </div>
     <?php
