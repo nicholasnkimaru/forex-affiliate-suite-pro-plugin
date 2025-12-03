@@ -270,15 +270,51 @@ if (!function_exists('fasp_is_preview_user_mode')) {
  * Get count of completed progress steps for a user.
  *
  * @param int|null $user_id User ID, defaults to current user.
- * @return array Array with 'completed' count and 'total' count.
+ * @param array|null $progress_data Optional. Pre-fetched progress data to avoid redundant DB queries.
+ * @return array Array with 'completed' count, 'total' count, and 'percent'.
  */
 if (!function_exists('fasp_get_progress_count')) {
-    function fasp_get_progress_count($user_id = null) {
-        $data = fasp_get_user_dashboard_data($user_id);
-        $completed = 0;
-        $total = count($data['progress']);
+    function fasp_get_progress_count($user_id = null, $progress_data = null) {
+        if ($user_id === null) {
+            $user_id = get_current_user_id();
+        }
         
-        foreach ($data['progress'] as $step) {
+        // Use provided progress data or fetch only progress-related data (lightweight)
+        if ($progress_data === null) {
+            $deriv_verified = get_user_meta($user_id, '_fasp_deriv_verified', true) === '1';
+            $progress_data = array(
+                array(
+                    'key'   => 'verified',
+                    'label' => 'Verify Platform Account',
+                    'done'  => $deriv_verified,
+                ),
+                array(
+                    'key'   => 'downloaded',
+                    'label' => 'Download Resource',
+                    'done'  => get_user_meta($user_id, '_fasp_downloaded', true) === '1',
+                ),
+                array(
+                    'key'   => 'booked',
+                    'label' => 'Book Coach Session',
+                    'done'  => get_user_meta($user_id, '_fasp_booked', true) === '1',
+                ),
+                array(
+                    'key'   => 'deposit',
+                    'label' => 'First Deposit',
+                    'done'  => get_user_meta($user_id, '_fasp_deposit', true) === '1',
+                ),
+                array(
+                    'key'   => 'trade',
+                    'label' => 'First Trade',
+                    'done'  => get_user_meta($user_id, '_fasp_trade', true) === '1',
+                ),
+            );
+        }
+        
+        $completed = 0;
+        $total = count($progress_data);
+        
+        foreach ($progress_data as $step) {
             if (!empty($step['done'])) {
                 $completed++;
             }
