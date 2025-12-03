@@ -4,3 +4,66 @@
 .fasp-resource .gallery-strip .strip img{height:140px;margin-right:8px;border-radius:10px}
 .fasp-resource .ad{margin:14px 0;padding:10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px}
 .fasp-resource .gate-logo{height:48px;border-radius:10px}
+
+/* Dashboard Styles */
+.fasp-dashboard{max-width:1200px;margin:0 auto;padding:20px}
+.fasp-hero{padding:30px 0;margin-bottom:20px;border-bottom:1px solid #e5e7eb}
+.fasp-hero h1{font-size:28px;margin:0 0 8px 0;color:#1f2937}
+.fasp-sub{color:#6b7280;margin:0 0 15px 0}
+.fasp-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}
+.fasp-admin-pill{background:#dbeafe;color:#1e40af;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500}
+.fasp-kpi{display:flex;gap:20px;flex-wrap:wrap}
+.fasp-kpi .k{display:flex;align-items:center;gap:6px;font-size:14px}
+.fasp-kpi .label{color:#6b7280}
+.fasp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.fasp-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px}
+.fasp-card h2{font-size:18px;margin:0 0 12px 0;color:#1f2937}
+.fasp-card h3{font-size:16px;margin:0 0 8px 0}
+.fasp-badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:500}
+.fasp-badge.ok{background:#dcfce7;color:#166534}
+.fasp-badge.muted{background:#f3f4f6;color:#6b7280}
+.fasp-badge.warn{background:#fef3c7;color:#92400e}
+.fasp-progress-bar{background:#e5e7eb;border-radius:10px;height:8px;overflow:hidden;margin:10px 0}
+.fasp-progress-fill{background:linear-gradient(90deg,#10b981,#3b82f6);height:100%;transition:width 0.3s}
+.fasp-progress-text{color:#6b7280;font-size:13px;margin:5px 0 15px 0}
+.fasp-checklist{list-style:none;padding:0;margin:0}
+.fasp-checklist li{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6}
+.fasp-checklist li:last-child{border-bottom:none}
+.fasp-checklist li .icon{width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.fasp-checklist li.completed{color:#166534}
+.fasp-checklist li.completed .icon{background:#dcfce7;border-radius:50%;color:#166534}
+.fasp-checklist li .text{flex:1}
+.fasp-checklist li .status{margin-left:auto}
+.fasp-platforms-grid{display:grid;gap:12px}
+.fasp-platform-card{display:flex;align-items:center;gap:12px;padding:12px;background:#f8fafc;border-radius:8px}
+.fasp-platform-card .platform-logo{width:40px;height:40px;object-fit:contain;border-radius:6px}
+.fasp-platform-card .platform-logo-placeholder{width:40px;height:40px;background:#e5e7eb;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#6b7280}
+.fasp-platform-card .platform-info{flex:1}
+.fasp-platform-card .platform-info h3{font-size:14px;margin:0 0 4px 0}
+.fasp-platform-card .click-count{display:block;font-size:12px;color:#6b7280}
+.fasp-platform-card .platform-actions{flex-shrink:0}
+.fasp-resources,.fasp-coaches{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:15px}
+.fasp-res,.fasp-coach{background:#f8fafc;border-radius:10px;overflow:hidden}
+.fasp-res img,.fasp-coach img{width:100%;height:120px;object-fit:cover}
+.fasp-res .ph,.fasp-coach .ph{width:100%;height:120px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:32px;color:#9ca3af}
+.fasp-res .meta,.fasp-coach .meta{padding:12px}
+.fasp-res .meta h3,.fasp-coach .meta h3{font-size:14px;margin:0 0 6px 0}
+.fasp-res .badges{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.fasp-res .badges .b{font-size:11px;padding:2px 6px;border-radius:4px;background:#e5e7eb;color:#4b5563}
+.fasp-res .badges .b.ok{background:#dcfce7;color:#166534}
+.fasp-res .badges .b.warn{background:#fef3c7;color:#92400e}
+.fasp-res .intro,.fasp-coach .intro{font-size:12px;color:#6b7280;margin-bottom:8px;line-height:1.4}
+.fasp-res .actions,.fasp-coach .actions{display:flex;gap:6px}
+.fasp-coach .role{font-weight:normal;color:#6b7280}
+.fasp-utm-card .fasp-utm-params{display:flex;flex-wrap:wrap;gap:8px}
+.fasp-utm-tag{background:#dbeafe;color:#1e40af;padding:4px 10px;border-radius:6px;font-size:12px}
+.fasp-utm-tag strong{margin-right:4px}
+.fasp-gating-info .fasp-gating-status{display:flex;flex-direction:column;gap:8px}
+.fasp-gating-info .gating-item{display:flex;align-items:center;gap:8px}
+.fasp-gating-info .label{color:#6b7280}
+.fasp-cta-card .fasp-cta-buttons{display:flex;flex-wrap:wrap;gap:10px}
+.fasp-note{background:#f3f4f6;padding:12px;border-radius:8px;color:#6b7280;font-size:13px}
+.fasp-note a{color:#3b82f6}
+.fasp-pill{display:inline-block;padding:3px 8px;border:1px solid #e5e7eb;border-radius:20px;font-size:12px;background:#fff}
+.button.fasp-button{background:#3b82f6;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:13px;cursor:pointer;text-decoration:none}
+.button.fasp-button:hover{background:#2563eb}
