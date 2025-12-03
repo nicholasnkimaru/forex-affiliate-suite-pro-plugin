@@ -52,7 +52,20 @@ function fasp_pay_update($data) {
     $clean['mpesa_passkey']  = isset($data['mpesa_passkey']) ? sanitize_text_field($data['mpesa_passkey']) : '';
     $clean['mpesa_initiator']= isset($data['mpesa_initiator']) ? sanitize_text_field($data['mpesa_initiator']) : '';
     $clean['mpesa_ipass']    = isset($data['mpesa_ipass']) ? sanitize_text_field($data['mpesa_ipass']) : '';
-    $clean['mpesa_cert']     = isset($data['mpesa_cert']) ? wp_kses_post($data['mpesa_cert']) : '';
+    
+    // M-Pesa PEM certificate - use sanitize_textarea_field and validate PEM markers
+    $mpesa_cert_raw = isset($data['mpesa_cert']) ? sanitize_textarea_field($data['mpesa_cert']) : '';
+    $clean['mpesa_cert'] = '';
+    if (!empty($mpesa_cert_raw)) {
+        // Validate PEM format - must have BEGIN and END markers
+        $has_begin = (strpos($mpesa_cert_raw, '-----BEGIN') !== false);
+        $has_end = (strpos($mpesa_cert_raw, '-----END') !== false);
+        if ($has_begin && $has_end) {
+            $clean['mpesa_cert'] = $mpesa_cert_raw;
+        }
+        // If invalid PEM format, leave empty - admin will need to re-enter
+    }
+    
     $env                      = isset($data['mpesa_env']) ? sanitize_text_field($data['mpesa_env']) : 'sandbox';
     $clean['mpesa_env']      = in_array($env, ['sandbox','live'], true) ? $env : 'sandbox';
 
@@ -323,12 +336,12 @@ if (!function_exists('fasp_bridge_sync_payments')) {
             }
         }
     }
-    // Hook when the unified option is updated
+    // Hook when the unified option is updated - fixed callback signature
     add_action('updated_option', function($option, $old_value, $value){
-        if ($option === 'fasp_payments' || $option_name === 'fasp_payments') {
+        if ($option === 'fasp_payments') {
             fasp_bridge_sync_payments($option, $old_value, $value);
         }
-    }, 10, 4);
+    }, 10, 3);
     
     
     

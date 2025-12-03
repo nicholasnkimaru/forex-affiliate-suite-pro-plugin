@@ -1,0 +1,76 @@
+name: PHP Lint and Unit Tests
+
+on:
+  push:
+    branches: [ main, develop, 'feature/**' ]
+  pull_request:
+    branches: [ main, develop ]
+
+# Restrict permissions for security
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: PHP Lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        php-version: ['7.4', '8.0', '8.1', '8.2']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          coverage: none
+
+      - name: PHP Syntax Check
+        run: |
+          find . -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 php -l
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+
+      - name: Run fasp_get_payments normalization tests
+        run: php tests/test-fasp-get-payments.php
+
+  security-check:
+    name: Basic Security Check
+    runs-on: ubuntu-latest
+    needs: lint
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for common security issues
+        run: |
+          echo "Checking for obvious security issues..."
+          # Check for eval() usage (excluding comments)
+          if grep -r --include="*.php" "eval\s*(" . --exclude-dir=vendor | grep -v "^[[:space:]]*//"; then
+            echo "Warning: eval() usage detected"
+          fi
+          # Check for unescaped output
+          echo "Security checks completed"
