@@ -173,11 +173,11 @@ function fasp_progress_strip($uid) {
         'trade'      => (get_user_meta($uid, '_fasp_trade', true) === '1'),
     );
     
-    echo '<div class="fasp-card" style="margin-top:12px;"><h3>Getting Started with Forex Trading</h3><div style="display:flex;gap:8px;flex-wrap:wrap;">';
+    echo '<div class="fasp-card fasp-progress-strip"><h3>Getting Started with Forex Trading</h3><div class="fasp-progress-strip-items">';
     foreach ($steps as $s) {
         $done = !empty($ok[$s['key']]);
-        $style = $done ? 'background:#dcfce7;border-color:#86efac;' : '';
-        echo '<span class="fasp-pill" style="' . esc_attr($style) . '">' . esc_html($s['label']) . ($done ? ' ✓' : '') . '</span>';
+        $class = $done ? 'fasp-pill done' : 'fasp-pill';
+        echo '<span class="' . esc_attr($class) . '">' . esc_html($s['label']) . ($done ? ' ✓' : '') . '</span>';
     }
     echo '</div></div>';
 }

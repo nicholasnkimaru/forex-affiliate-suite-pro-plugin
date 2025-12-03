@@ -176,3 +176,20 @@
   border-color: #fcd34d;
   color: #92400e;
 }
+
+/* WooCommerce Dashboard Progress Strip */
+.fasp-progress-strip {
+  margin-top: 12px;
+}
+.fasp-progress-strip h3 {
+  margin-bottom: 12px;
+}
+.fasp-progress-strip-items {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.fasp-pill.done {
+  background: #dcfce7;
+  border-color: #86efac;
+}
