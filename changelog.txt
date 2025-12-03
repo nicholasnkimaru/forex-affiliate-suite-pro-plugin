@@ -1,3 +1,10 @@
+Forex Affiliate Suite PRO — Dashboard Rebranding (2025-12-03)
+- Rebranded user-facing dashboard labels from "Forex Affiliate" to "Forex Trading".
+- Updated templates/dashboard.php: Changed visible note text to "Forex Trading → Setup".
+- Updated includes/dashboard.php: Changed heading to "Forex Trading Dashboard".
+- Updated includes/woocommerce-dashboard.php: Changed WooCommerce My Account menu label to "Forex Trading".
+- Note: Internal slugs, function names, and DB keys remain unchanged.
+
 Forex Affiliate Suite PRO — r14.9 FINAL (built 2025-10-29 20:08:55)
 - Payments: Unified single renderer only. Legacy admin-payments.php/admin-payments-pro.php loaders removed.
 - Tabs kept: Payments (Unified) and Bank Transfer (Bank Details / Instructions). Crypto promoted as first-class tab.
