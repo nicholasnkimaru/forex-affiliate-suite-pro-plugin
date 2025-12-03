@@ -6,10 +6,16 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+# Restrict permissions for security
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: PHP Lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         php-version: ['7.4', '8.0', '8.1', '8.2']
@@ -32,6 +38,8 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     needs: lint
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout code
@@ -50,6 +58,8 @@ jobs:
     name: Basic Security Check
     runs-on: ubuntu-latest
     needs: lint
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout code
