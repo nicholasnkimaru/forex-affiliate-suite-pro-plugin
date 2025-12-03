@@ -42,8 +42,12 @@ if (!function_exists('fasp_is_user_allowed_by_gating')) {
         // Get gating_roles option (new multi-select format)
         $gating_roles = get_option('fasp_gating_roles', array());
         if (!is_array($gating_roles)) {
-            // Parse legacy CSV format
-            $gating_roles = array_filter(array_map('trim', explode(',', $allowed_roles_raw)));
+            // Parse legacy CSV format and sanitize
+            $allowed_roles_raw = sanitize_text_field($allowed_roles_raw);
+            $gating_roles = array_filter(array_map('sanitize_key', explode(',', $allowed_roles_raw)));
+        } else {
+            // Sanitize each role in the array
+            $gating_roles = array_map('sanitize_key', $gating_roles);
         }
         
         // Check per-page override if post_id is provided

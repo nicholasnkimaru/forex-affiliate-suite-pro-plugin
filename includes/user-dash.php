@@ -162,19 +162,26 @@ if (!function_exists('fasp_get_user_dashboard_data')) {
         // Get stats (if admin or has access)
         if ($data['is_admin']) {
             global $wpdb;
+            // Table name is safe because wpdb->prefix is controlled by WordPress
             $table = $wpdb->prefix . 'fasp_clicks';
             $d30 = gmdate('Y-m-d', strtotime('-30 days')) . ' 00:00:00';
             $now = gmdate('Y-m-d') . ' 23:59:59';
             
             // Check if table exists before querying
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
             $table_exists = $wpdb->get_var($wpdb->prepare(
                 "SHOW TABLES LIKE %s",
                 $table
             ));
             
             if ($table_exists) {
-                $q = "SELECT action, COUNT(*) c FROM `$table` WHERE created_at BETWEEN %s AND %s GROUP BY action";
-                $rows = $wpdb->get_results($wpdb->prepare($q, $d30, $now), ARRAY_A);
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+                $q = $wpdb->prepare(
+                    "SELECT action, COUNT(*) c FROM `" . esc_sql($table) . "` WHERE created_at BETWEEN %s AND %s GROUP BY action",
+                    $d30,
+                    $now
+                );
+                $rows = $wpdb->get_results($q, ARRAY_A);
                 $map = array('click' => 0, 'lead' => 0, 'paid' => 0);
                 if (is_array($rows)) {
                     foreach ($rows as $row) {

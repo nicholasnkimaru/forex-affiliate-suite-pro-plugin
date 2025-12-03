@@ -14,15 +14,16 @@ add_filter('query_vars', function($v) {
 });
 
 add_filter('woocommerce_account_menu_items', function($items) {
+    $menu_label = __('Forex Trading', 'fasp');
     $new = array();
     foreach ($items as $k => $v) {
         $new[$k] = $v;
         if ($k === 'dashboard') {
-            $new['forex-affiliate'] = 'Forex Trading';
+            $new['forex-affiliate'] = $menu_label;
         }
     }
     if (!isset($new['forex-affiliate'])) {
-        $new['forex-affiliate'] = 'Forex Trading';
+        $new['forex-affiliate'] = $menu_label;
     }
     return $new;
 });

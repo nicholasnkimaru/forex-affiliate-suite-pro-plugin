@@ -63,9 +63,21 @@ $gating_opts = get_option('fasp_platform_gating', array());
 $require_login = !empty($gating_opts['require_login']);
 $is_gated = $require_login && !$is_logged_in;
 
-// UTM tracking info
-$utm_source = isset($_GET['utm_source']) ? sanitize_text_field(wp_unslash($_GET['utm_source'])) : '';
-$utm_campaign = isset($_GET['utm_campaign']) ? sanitize_text_field(wp_unslash($_GET['utm_campaign'])) : '';
+// UTM tracking info - validate format (alphanumeric, hyphens, underscores only)
+$utm_source = '';
+$utm_campaign = '';
+if (isset($_GET['utm_source'])) {
+    $raw_source = sanitize_text_field(wp_unslash($_GET['utm_source']));
+    if (preg_match('/^[a-zA-Z0-9_-]+$/', $raw_source)) {
+        $utm_source = $raw_source;
+    }
+}
+if (isset($_GET['utm_campaign'])) {
+    $raw_campaign = sanitize_text_field(wp_unslash($_GET['utm_campaign']));
+    if (preg_match('/^[a-zA-Z0-9_-]+$/', $raw_campaign)) {
+        $utm_campaign = $raw_campaign;
+    }
+}
 ?>
 <div class="fasp-wrap fasp-dashboard">
   <!-- Hero Section -->
@@ -178,7 +190,11 @@ $utm_campaign = isset($_GET['utm_campaign']) ? sanitize_text_field(wp_unslash($_
       <?php else: ?>
         <div class="fasp-platforms-list">
           <?php foreach ($platforms as $p):
-            $slug = isset($p['slug']) ? $p['slug'] : (isset($p['name']) ? sanitize_title($p['name']) : '');
+            // Validate and sanitize slug to contain only safe characters
+            $raw_slug = isset($p['slug']) ? $p['slug'] : (isset($p['name']) ? $p['name'] : '');
+            $slug = sanitize_key($raw_slug);
+            if (empty($slug)) continue;
+            
             $name = isset($p['name']) ? $p['name'] : $slug;
             $logo = isset($p['logo_url']) ? $p['logo_url'] : '';
             $enabled = isset($p['enabled']) ? $p['enabled'] : '1';
@@ -189,7 +205,7 @@ $utm_campaign = isset($_GET['utm_campaign']) ? sanitize_text_field(wp_unslash($_
             $count = isset($clicks_opt[$slug]) ? intval($clicks_opt[$slug]) : 0;
             $show_clicks = (!empty($p['show_clicks_to_users']) || $is_admin);
             $verified_platform = get_user_meta($user_id, '_fasp_verified_' . $slug, true) === '1';
-            $join_url = home_url('/fasp-go/' . $slug . '?dest=signup');
+            $join_url = home_url('/fasp-go/' . rawurlencode($slug) . '?dest=signup');
           ?>
             <div class="fasp-platform-item">
               <div class="fasp-platform-info">
