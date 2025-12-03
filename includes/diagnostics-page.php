@@ -269,7 +269,11 @@ if (!function_exists('fasp_render_diagnostics_page')) {
             }
             
             $phone = sanitize_text_field(wp_unslash($_POST['mpesa_phone']));
-            $amount = floatval($_POST['mpesa_amount']);
+            // Sanitize and validate amount - must be numeric and within range
+            $amount_raw = sanitize_text_field(wp_unslash($_POST['mpesa_amount']));
+            $amount = is_numeric($amount_raw) ? floatval($amount_raw) : 0;
+            // Limit to 1-10 KES for sandbox testing
+            $amount = max(1, min(10, $amount));
             $mpesa_result = fasp_test_mpesa_stk($phone, $amount);
         }
         

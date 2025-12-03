@@ -238,18 +238,35 @@ if (!function_exists('fasp_render_geo_gating_page')) {
                 wp_die(esc_html__('Security check failed', 'forex-affiliate-suite-pro'));
             }
             
-            $upload_dir = FASP_PATH . 'plugin/data/';
-            if (!file_exists($upload_dir)) {
-                wp_mkdir_p($upload_dir);
-            }
+            // Validate file upload
+            $file = $_FILES['fasp_mmdb_upload'];
+            $filename = isset($file['name']) ? sanitize_file_name($file['name']) : '';
+            $file_ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
             
-            $tmp_name = sanitize_text_field($_FILES['fasp_mmdb_upload']['tmp_name']);
-            $dest = $upload_dir . 'GeoLite2-City.mmdb';
-            
-            if (move_uploaded_file($tmp_name, $dest)) {
-                echo '<div class="updated"><p>' . esc_html__('MaxMind database uploaded successfully.', 'forex-affiliate-suite-pro') . '</p></div>';
+            // Only allow .mmdb files
+            if ($file_ext !== 'mmdb') {
+                echo '<div class="error"><p>' . esc_html__('Invalid file type. Only .mmdb files are allowed.', 'forex-affiliate-suite-pro') . '</p></div>';
+            } elseif (!isset($file['size']) || $file['size'] > 100 * 1024 * 1024) {
+                // Max 100MB
+                echo '<div class="error"><p>' . esc_html__('File too large. Maximum size is 100MB.', 'forex-affiliate-suite-pro') . '</p></div>';
+            } elseif (!isset($file['error']) || $file['error'] !== UPLOAD_ERR_OK) {
+                echo '<div class="error"><p>' . esc_html__('Upload error occurred.', 'forex-affiliate-suite-pro') . '</p></div>';
             } else {
-                echo '<div class="error"><p>' . esc_html__('Failed to upload MaxMind database.', 'forex-affiliate-suite-pro') . '</p></div>';
+                $upload_dir = FASP_PATH . 'plugin/data/';
+                if (!file_exists($upload_dir)) {
+                    wp_mkdir_p($upload_dir);
+                }
+                
+                // Use WordPress function to get clean tmp path - don't sanitize binary paths
+                $tmp_name = $file['tmp_name'];
+                $dest = $upload_dir . 'GeoLite2-City.mmdb';
+                
+                // Verify it's an uploaded file before moving
+                if (is_uploaded_file($tmp_name) && move_uploaded_file($tmp_name, $dest)) {
+                    echo '<div class="updated"><p>' . esc_html__('MaxMind database uploaded successfully.', 'forex-affiliate-suite-pro') . '</p></div>';
+                } else {
+                    echo '<div class="error"><p>' . esc_html__('Failed to upload MaxMind database.', 'forex-affiliate-suite-pro') . '</p></div>';
+                }
             }
         }
         

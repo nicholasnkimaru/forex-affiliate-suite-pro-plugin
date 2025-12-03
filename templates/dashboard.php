@@ -366,7 +366,7 @@ foreach ($utm_keys as $key) {
                 <?php endif; ?>
                 <?php if (!empty($platforms)) : ?>
                     <?php
-                    // PHP 7.3+ compatibility: use key() instead of array_key_first()
+                    // PHP 7.2 compatibility: use reset() + key() instead of array_key_first() which requires PHP 7.3+
                     reset($platforms);
                     $first_platform_key = key($platforms);
                     ?>
