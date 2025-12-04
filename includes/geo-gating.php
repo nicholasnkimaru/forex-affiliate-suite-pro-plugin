@@ -1,180 +1,324 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+if (!defined('ABSPATH')) exit;
 
 /**
- * Full Geo Gating with Select2 UI + region auto-select.
- * Uses data/countries.json and data/regions.json included in the repo.
+ * Admin: Geo Gating screen (full world country list)
+ *
+ * Option name: 'fasp_geo_allowed' (array of ISO2 country codes)
+ *
+ * Note: This file contains a large list of ISO2 country codes. It renders
+ * a multi-select where admins can pick allowed countries. This intentionally
+ * does not require select2 — it uses the native HTML multiple select.
+ *
+ * Save as: includes/geo-gating.php (overwrite existing).
  */
 
-/* load countries and regions */
-if ( ! function_exists( 'fasp_get_countries_list' ) ) {
-    function fasp_get_countries_list() {
-        $path = plugin_dir_path( __DIR__ ) . 'data/countries.json';
-        if ( file_exists( $path ) ) {
-            $json = file_get_contents( $path );
-            $arr  = json_decode( $json, true );
-            if ( is_array( $arr ) ) return $arr;
-        }
-        return array();
-    }
+add_action('admin_menu', function() {
+  add_submenu_page('forex-affiliate', 'Geo Gating', 'Geo Gating', 'manage_options', 'fasp_geo_gating', 'fasp_geo_gating_page');
+});
+
+function fasp_geo_get_countries() {
+  // Full ISO2 country list (common names). Expand or adjust labels if desired.
+  return array(
+    'AF' => 'Afghanistan',
+    'AX' => 'Aland Islands',
+    'AL' => 'Albania',
+    'DZ' => 'Algeria',
+    'AS' => 'American Samoa',
+    'AD' => 'Andorra',
+    'AO' => 'Angola',
+    'AI' => 'Anguilla',
+    'AQ' => 'Antarctica',
+    'AG' => 'Antigua and Barbuda',
+    'AR' => 'Argentina',
+    'AM' => 'Armenia',
+    'AW' => 'Aruba',
+    'AU' => 'Australia',
+    'AT' => 'Austria',
+    'AZ' => 'Azerbaijan',
+    'BS' => 'Bahamas',
+    'BH' => 'Bahrain',
+    'BD' => 'Bangladesh',
+    'BB' => 'Barbados',
+    'BY' => 'Belarus',
+    'BE' => 'Belgium',
+    'BZ' => 'Belize',
+    'BJ' => 'Benin',
+    'BM' => 'Bermuda',
+    'BT' => 'Bhutan',
+    'BO' => 'Bolivia (Plurinational State of)',
+    'BQ' => 'Bonaire, Sint Eustatius and Saba',
+    'BA' => 'Bosnia and Herzegovina',
+    'BW' => 'Botswana',
+    'BV' => 'Bouvet Island',
+    'BR' => 'Brazil',
+    'IO' => 'British Indian Ocean Territory',
+    'BN' => 'Brunei Darussalam',
+    'BG' => 'Bulgaria',
+    'BF' => 'Burkina Faso',
+    'BI' => 'Burundi',
+    'CV' => 'Cabo Verde',
+    'KH' => 'Cambodia',
+    'CM' => 'Cameroon',
+    'CA' => 'Canada',
+    'KY' => 'Cayman Islands',
+    'CF' => 'Central African Republic',
+    'TD' => 'Chad',
+    'CL' => 'Chile',
+    'CN' => 'China',
+    'CX' => 'Christmas Island',
+    'CC' => 'Cocos (Keeling) Islands',
+    'CO' => 'Colombia',
+    'KM' => 'Comoros',
+    'CG' => 'Congo',
+    'CD' => 'Congo (Democratic Republic of the)',
+    'CK' => 'Cook Islands',
+    'CR' => 'Costa Rica',
+    'CI' => 'Côte d\'Ivoire',
+    'HR' => 'Croatia',
+    'CU' => 'Cuba',
+    'CW' => 'Curaçao',
+    'CY' => 'Cyprus',
+    'CZ' => 'Czechia',
+    'DK' => 'Denmark',
+    'DJ' => 'Djibouti',
+    'DM' => 'Dominica',
+    'DO' => 'Dominican Republic',
+    'EC' => 'Ecuador',
+    'EG' => 'Egypt',
+    'SV' => 'El Salvador',
+    'GQ' => 'Equatorial Guinea',
+    'ER' => 'Eritrea',
+    'EE' => 'Estonia',
+    'ET' => 'Ethiopia',
+    'FK' => 'Falkland Islands (Malvinas)',
+    'FO' => 'Faroe Islands',
+    'FJ' => 'Fiji',
+    'FI' => 'Finland',
+    'FR' => 'France',
+    'GF' => 'French Guiana',
+    'PF' => 'French Polynesia',
+    'TF' => 'French Southern Territories',
+    'GA' => 'Gabon',
+    'GM' => 'Gambia',
+    'GE' => 'Georgia',
+    'DE' => 'Germany',
+    'GH' => 'Ghana',
+    'GI' => 'Gibraltar',
+    'GR' => 'Greece',
+    'GL' => 'Greenland',
+    'GD' => 'Grenada',
+    'GP' => 'Guadeloupe',
+    'GU' => 'Guam',
+    'GT' => 'Guatemala',
+    'GG' => 'Guernsey',
+    'GN' => 'Guinea',
+    'GW' => 'Guinea-Bissau',
+    'GY' => 'Guyana',
+    'HT' => 'Haiti',
+    'HM' => 'Heard Island and McDonald Islands',
+    'VA' => 'Holy See',
+    'HN' => 'Honduras',
+    'HK' => 'Hong Kong',
+    'HU' => 'Hungary',
+    'IS' => 'Iceland',
+    'IN' => 'India',
+    'ID' => 'Indonesia',
+    'IR' => 'Iran (Islamic Republic of)',
+    'IQ' => 'Iraq',
+    'IE' => 'Ireland',
+    'IM' => 'Isle of Man',
+    'IL' => 'Israel',
+    'IT' => 'Italy',
+    'JM' => 'Jamaica',
+    'JP' => 'Japan',
+    'JE' => 'Jersey',
+    'JO' => 'Jordan',
+    'KZ' => 'Kazakhstan',
+    'KE' => 'Kenya',
+    'KI' => 'Kiribati',
+    'KP' => 'Korea (Democratic People\'s Republic of)',
+    'KR' => 'Korea (Republic of)',
+    'KW' => 'Kuwait',
+    'KG' => 'Kyrgyzstan',
+    'LA' => 'Lao People\'s Democratic Republic',
+    'LV' => 'Latvia',
+    'LB' => 'Lebanon',
+    'LS' => 'Lesotho',
+    'LR' => 'Liberia',
+    'LY' => 'Libya',
+    'LI' => 'Liechtenstein',
+    'LT' => 'Lithuania',
+    'LU' => 'Luxembourg',
+    'MO' => 'Macao',
+    'MK' => 'North Macedonia',
+    'MG' => 'Madagascar',
+    'MW' => 'Malawi',
+    'MY' => 'Malaysia',
+    'MV' => 'Maldives',
+    'ML' => 'Mali',
+    'MT' => 'Malta',
+    'MH' => 'Marshall Islands',
+    'MQ' => 'Martinique',
+    'MR' => 'Mauritania',
+    'MU' => 'Mauritius',
+    'YT' => 'Mayotte',
+    'MX' => 'Mexico',
+    'FM' => 'Micronesia (Federated States of)',
+    'MD' => 'Moldova (Republic of)',
+    'MC' => 'Monaco',
+    'MN' => 'Mongolia',
+    'ME' => 'Montenegro',
+    'MS' => 'Montserrat',
+    'MA' => 'Morocco',
+    'MZ' => 'Mozambique',
+    'MM' => 'Myanmar',
+    'NA' => 'Namibia',
+    'NR' => 'Nauru',
+    'NP' => 'Nepal',
+    'NL' => 'Netherlands',
+    'NC' => 'New Caledonia',
+    'NZ' => 'New Zealand',
+    'NI' => 'Nicaragua',
+    'NE' => 'Niger',
+    'NG' => 'Nigeria',
+    'NU' => 'Niue',
+    'NF' => 'Norfolk Island',
+    'MP' => 'Northern Mariana Islands',
+    'NO' => 'Norway',
+    'OM' => 'Oman',
+    'PK' => 'Pakistan',
+    'PW' => 'Palau',
+    'PS' => 'Palestine, State of',
+    'PA' => 'Panama',
+    'PG' => 'Papua New Guinea',
+    'PY' => 'Paraguay',
+    'PE' => 'Peru',
+    'PH' => 'Philippines',
+    'PN' => 'Pitcairn',
+    'PL' => 'Poland',
+    'PT' => 'Portugal',
+    'PR' => 'Puerto Rico',
+    'QA' => 'Qatar',
+    'RE' => 'Réunion',
+    'RO' => 'Romania',
+    'RU' => 'Russian Federation',
+    'RW' => 'Rwanda',
+    'BL' => 'Saint Barthélemy',
+    'SH' => 'Saint Helena, Ascension and Tristan da Cunha',
+    'KN' => 'Saint Kitts and Nevis',
+    'LC' => 'Saint Lucia',
+    'MF' => 'Saint Martin (French part)',
+    'PM' => 'Saint Pierre and Miquelon',
+    'VC' => 'Saint Vincent and the Grenadines',
+    'WS' => 'Samoa',
+    'SM' => 'San Marino',
+    'ST' => 'Sao Tome and Principe',
+    'SA' => 'Saudi Arabia',
+    'SN' => 'Senegal',
+    'RS' => 'Serbia',
+    'SC' => 'Seychelles',
+    'SL' => 'Sierra Leone',
+    'SG' => 'Singapore',
+    'SX' => 'Sint Maarten (Dutch part)',
+    'SK' => 'Slovakia',
+    'SI' => 'Slovenia',
+    'SB' => 'Solomon Islands',
+    'SO' => 'Somalia',
+    'ZA' => 'South Africa',
+    'GS' => 'South Georgia and the South Sandwich Islands',
+    'SS' => 'South Sudan',
+    'ES' => 'Spain',
+    'LK' => 'Sri Lanka',
+    'SD' => 'Sudan',
+    'SR' => 'Suriname',
+    'SJ' => 'Svalbard and Jan Mayen',
+    'SE' => 'Sweden',
+    'CH' => 'Switzerland',
+    'SY' => 'Syrian Arab Republic',
+    'TW' => 'Taiwan, Province of China',
+    'TJ' => 'Tajikistan',
+    'TZ' => 'Tanzania, United Republic of',
+    'TH' => 'Thailand',
+    'TL' => 'Timor-Leste',
+    'TG' => 'Togo',
+    'TK' => 'Tokelau',
+    'TO' => 'Tonga',
+    'TT' => 'Trinidad and Tobago',
+    'TN' => 'Tunisia',
+    'TR' => 'Turkey',
+    'TM' => 'Turkmenistan',
+    'TC' => 'Turks and Caicos Islands',
+    'TV' => 'Tuvalu',
+    'UG' => 'Uganda',
+    'UA' => 'Ukraine',
+    'AE' => 'United Arab Emirates',
+    'GB' => 'United Kingdom of Great Britain and Northern Ireland',
+    'US' => 'United States of America',
+    'UM' => 'United States Minor Outlying Islands',
+    'UY' => 'Uruguay',
+    'UZ' => 'Uzbekistan',
+    'VU' => 'Vanuatu',
+    'VE' => 'Venezuela (Bolivarian Republic of)',
+    'VN' => 'Viet Nam',
+    'VG' => 'Virgin Islands (British)',
+    'VI' => 'Virgin Islands (U.S.)',
+    'WF' => 'Wallis and Futuna',
+    'EH' => 'Western Sahara',
+    'YE' => 'Yemen',
+    'ZM' => 'Zambia',
+    'ZW' => 'Zimbabwe',
+  );
 }
 
-if ( ! function_exists( 'fasp_get_regions_map' ) ) {
-    function fasp_get_regions_map() {
-        $path = plugin_dir_path( __DIR__ ) . 'data/regions.json';
-        if ( file_exists( $path ) ) {
-            $json = file_get_contents( $path );
-            $arr  = json_decode( $json, true );
-            if ( is_array( $arr ) ) return $arr;
-        }
-        return array();
-    }
+function fasp_geo_gating_page() {
+  if (!current_user_can('manage_options')) return;
+  $saved = get_option('fasp_geo_allowed', []);
+  if (!is_array($saved)) $saved = array();
+
+  // Handle save
+  if (!empty($_POST['fasp_geo_save']) && check_admin_referer('fasp_geo_save','fasp_geo_nonce')) {
+    $incoming = isset($_POST['fasp_geo_allowed']) ? (array) $_POST['fasp_geo_allowed'] : [];
+    $sanitized = array_map(function($v){ return strtoupper(sanitize_text_field($v)); }, $incoming);
+    update_option('fasp_geo_allowed', $sanitized);
+    echo '<div class="updated"><p>' . esc_html__('Geo gating settings saved.', 'fasp') . '</p></div>';
+    $saved = $sanitized;
+  }
+
+  $countries = fasp_geo_get_countries();
+  ?>
+  <div class="wrap fasp-admin">
+    <h1><?php echo esc_html__('Geo Gating', 'fasp'); ?></h1>
+
+    <div class="fasp-wrap fasp-card">
+      <form method="post">
+        <?php wp_nonce_field('fasp_geo_save','fasp_geo_nonce'); ?>
+
+        <p class="fasp-muted"><?php echo esc_html__('Select allowed countries. If you leave this empty, geo gating is not applied.', 'fasp'); ?></p>
+
+        <p>
+          <label for="fasp_geo_allowed"><?php echo esc_html__('Allowed Countries (select multiple)', 'fasp'); ?></label><br>
+          <select name="fasp_geo_allowed[]" id="fasp_geo_allowed" multiple style="min-width:360px; min-height:260px;">
+            <?php foreach ($countries as $iso => $label): ?>
+              <option value="<?php echo esc_attr($iso); ?>" <?php echo in_array($iso, $saved) ? 'selected' : ''; ?>>
+                <?php echo esc_html($iso . ' — ' . $label); ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </p>
+
+        <p>
+          <button class="button button-primary" name="fasp_geo_save" value="1"><?php echo esc_html__('Save', 'fasp'); ?></button>
+        </p>
+      </form>
+    </div>
+
+    <div class="fasp-wrap fasp-card">
+      <h2><?php echo esc_html__('Current configuration', 'fasp'); ?></h2>
+      <p class="fasp-muted"><?php echo esc_html__('Allowed ISO codes saved in option: fasp_geo_allowed', 'fasp'); ?></p>
+      <p><strong><?php echo esc_html(implode(', ', $saved) ?: esc_html__('(none)', 'fasp')); ?></strong></p>
+    </div>
+  </div>
+  <?php
 }
-
-/* admin assets */
-if ( ! function_exists( 'fasp_geo_admin_assets' ) ) {
-    add_action( 'admin_enqueue_scripts', 'fasp_geo_admin_assets' );
-    function fasp_geo_admin_assets( $hook ) {
-        if ( isset( $_GET['page'] ) && 'fasp_geo_gating' === $_GET['page'] ) {
-            wp_enqueue_style( 'select2-css', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', array(), '4.1.0-rc.0' );
-            wp_enqueue_script( 'select2-js', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', array( 'jquery' ), '4.1.0-rc.0', true );
-            wp_register_script( 'fasp-geo-admin', plugin_dir_url( __DIR__ ) . 'assets/js/geo-admin.js', array( 'jquery', 'select2-js' ), '1.0.0', true );
-            wp_localize_script( 'fasp-geo-admin', 'fasp_geo_data', array( 'regions' => fasp_get_regions_map() ) );
-            wp_enqueue_script( 'fasp-geo-admin' );
-        }
-    }
-}
-
-/* admin page */
-if ( ! function_exists( 'fasp_register_geo_gating_admin' ) ) {
-    add_action( 'admin_menu', 'fasp_register_geo_gating_admin' );
-    function fasp_register_geo_gating_admin() {
-        $parent = 'forex-affiliate';
-        if ( ! menu_page_url( $parent, false ) ) $parent = 'options-general.php';
-        add_submenu_page( $parent, __( 'Geo Gating', 'fasp' ), __( 'Geo Gating', 'fasp' ), 'manage_options', 'fasp_geo_gating', 'fasp_admin_geo_gating_page' );
-    }
-}
-
-if ( ! function_exists( 'fasp_admin_geo_gating_page' ) ) {
-    function fasp_admin_geo_gating_page() {
-        if ( ! current_user_can( 'manage_options' ) ) wp_die( __( 'Unauthorized', 'fasp' ) );
-        if ( isset( $_POST['fasp_geo_save'] ) ) {
-            check_admin_referer( 'fasp_geo_save', 'fasp_geo_nonce' );
-            $allow = isset( $_POST['fasp_geo_allow'] ) ? array_map( 'sanitize_text_field', (array) $_POST['fasp_geo_allow'] ) : array();
-            $block = isset( $_POST['fasp_geo_block'] ) ? array_map( 'sanitize_text_field', (array) $_POST['fasp_geo_block'] ) : array();
-            $regions = isset( $_POST['fasp_geo_regions'] ) ? array_map( 'sanitize_text_field', (array) $_POST['fasp_geo_regions'] ) : array();
-            update_option( 'fasp_geo_allow', array_values( $allow ) );
-            update_option( 'fasp_geo_block', array_values( $block ) );
-            update_option( 'fasp_geo_regions', array_values( $regions ) );
-            $unknown = isset( $_POST['fasp_geo_unknown_blocked'] ) ? 1 : 0;
-            update_option( 'fasp_geo_unknown_blocked', $unknown );
-            add_settings_error( 'fasp_geo', 'saved', __( 'Geo gating settings saved.', 'fasp' ), 'updated' );
-        }
-
-        settings_errors( 'fasp_geo' );
-
-        $allow_selected = get_option( 'fasp_geo_allow', array() );
-        $block_selected = get_option( 'fasp_geo_block', array() );
-        $regions_selected = get_option( 'fasp_geo_regions', array() );
-        $unknown_blocked = get_option( 'fasp_geo_unknown_blocked', 0 );
-
-        $countries = fasp_get_countries_list();
-        $regions = fasp_get_regions_map();
-        ?>
-        <div class="wrap">
-            <h1><?php echo esc_html__( 'Geo Gating', 'fasp' ); ?></h1>
-            <form method="post" action="">
-                <?php wp_nonce_field( 'fasp_geo_save', 'fasp_geo_nonce' ); ?>
-
-                <table class="form-table">
-                    <tr>
-                        <th><?php echo esc_html__( 'Regions', 'fasp' ); ?></th>
-                        <td>
-                            <select name="fasp_geo_regions[]" id="fasp-geo-regions" multiple class="fasp-geo-regions" style="width:420px;">
-                                <?php foreach ( $regions as $slug => $arr ) : ?>
-                                    <option value="<?php echo esc_attr( $slug ); ?>" <?php selected( in_array( $slug, (array) $regions_selected, true ) ); ?>><?php echo esc_html( $slug ); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <p class="description"><?php echo esc_html__( 'Select region(s) to quick-select countries. Selecting regions will highlight countries in the Allow/Block lists; you must Save to persist.', 'fasp' ); ?></p>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <th><?php echo esc_html__( 'Allowlist (countries)', 'fasp' ); ?></th>
-                        <td>
-                            <select name="fasp_geo_allow[]" id="fasp-geo-allow" class="fasp-geo-multiselect" multiple style="width:420px;height:240px;">
-                                <?php foreach ( $countries as $code => $label ) : ?>
-                                    <option value="<?php echo esc_attr( $code ); ?>" <?php selected( in_array( $code, (array) $allow_selected, true ) ); ?>><?php echo esc_html( $label ); ?> (<?php echo esc_html( $code ); ?>)</option>
-                                <?php endforeach; ?>
-                            </select>
-                            <p class="description"><?php echo esc_html__( 'Select countries to explicitly allow. Allowlist wins over blocklist.', 'fasp' ); ?></p>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <th><?php echo esc_html__( 'Blocklist (countries)', 'fasp' ); ?></th>
-                        <td>
-                            <select name="fasp_geo_block[]" id="fasp-geo-block" class="fasp-geo-multiselect" multiple style="width:420px;height:240px;">
-                                <?php foreach ( $countries as $code => $label ) : ?>
-                                    <option value="<?php echo esc_attr( $code ); ?>" <?php selected( in_array( $code, (array) $block_selected, true ) ); ?>><?php echo esc_html( $label ); ?> (<?php echo esc_html( $code ); ?>)</option>
-                                <?php endforeach; ?>
-                            </select>
-                            <p class="description"><?php echo esc_html__( 'Select countries to explicitly block. If allowlist is set, countries not in allowlist are implicitly blocked.', 'fasp' ); ?></p>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <th><?php echo esc_html__( 'Unknown IP handling', 'fasp' ); ?></th>
-                        <td>
-                            <label><input type="checkbox" name="fasp_geo_unknown_blocked" value="1" <?php checked( 1, $unknown_blocked ); ?> /> <?php echo esc_html__( 'Treat unknown/unresolvable IP country as blocked', 'fasp' ); ?></label>
-                        </td>
-                    </tr>
-                </table>
-
-                <p class="submit">
-                    <button type="submit" name="fasp_geo_save" class="button button-primary"><?php echo esc_html__( 'Save Changes', 'fasp' ); ?></button>
-                </p>
-            </form>
-        </div>
-        <?php
-    }
-}
-
-/* IP lookup helper (MaxMind optional, fallback to ip-api) */
-if ( ! function_exists( 'fasp_lookup_country_by_ip' ) ) {
-    function fasp_lookup_country_by_ip( $ip ) {
-        if ( empty( $ip ) ) return '';
-        $db = plugin_dir_path( __DIR__ ) . 'data/GeoLite2-City.mmdb';
-        if ( file_exists( $db ) && class_exists( 'GeoIp2\Database\Reader' ) ) {
-            try {
-                $reader = new GeoIp2\Database\Reader( $db );
-                $rec = $reader->city( $ip );
-                if ( isset( $rec->country ) && isset( $rec->country->isoCode ) ) return strtoupper( $rec->country->isoCode );
-            } catch ( Exception $e ) { }
-        }
-        $resp = wp_remote_get( 'http://ip-api.com/json/' . rawurlencode( $ip ) . '?fields=countryCode,status' );
-        if ( is_wp_error( $resp ) ) return '';
-        $body = wp_remote_retrieve_body( $resp );
-        if ( empty( $body ) ) return '';
-        $json = json_decode( $body, true );
-        if ( is_array( $json ) && isset( $json['status'] ) && 'success' === $json['status'] && ! empty( $json['countryCode'] ) ) {
-            return strtoupper( $json['countryCode'] );
-        }
-        return '';
-    }
-}
-
-if ( ! function_exists( 'fasp_is_ip_allowed_by_geo' ) ) {
-    function fasp_is_ip_allowed_by_geo( $ip ) {
-        $code = fasp_lookup_country_by_ip( $ip );
-        $allow = (array) get_option( 'fasp_geo_allow', array() );
-        $block = (array) get_option( 'fasp_geo_block', array() );
-        $unknown_blocked = (bool) get_option( 'fasp_geo_unknown_blocked', false );
-        if ( empty( $code ) ) return ! $unknown_blocked;
-        if ( ! empty( $allow ) ) return in_array( $code, $allow, true );
-        if ( ! empty( $block ) && in_array( $code, $block, true ) ) return false;
-        return true;
-    }
-}
+?>

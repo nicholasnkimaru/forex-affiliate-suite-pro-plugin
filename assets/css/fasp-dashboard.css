@@ -1,36 +1,79 @@
-/* Dashboard visual styles */
-.fasp-dash-wrap{max-width:1180px;margin:0 auto;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
-.fasp-dash-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:12px}
-.fasp-dash-title h1{margin:0;font-size:1.6rem;color:#1f2937}
-.fasp-dash-sub{margin:4px 0 0;color:#6b7280}
-.fasp-cta-primary,.fasp-cta-secondary{display:inline-block;padding:8px 14px;border-radius:6px;text-decoration:none}
-.fasp-cta-primary{background:#0ea5a4;color:#fff}
-.fasp-cta-secondary{background:#e6f6f5;color:#064e4e;margin-left:8px;padding:8px 12px}
-.fasp-block-notice{border:1px solid #fde2e2;background:#fff5f5;padding:12px;border-radius:6px;margin-bottom:14px}
-.fasp-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
-.fasp-card{grid-column:span 4;background:#fff;border:1px solid #eef2f7;border-radius:8px;padding:16px;box-shadow:0 1px 2px rgba(16,24,40,0.03)}
-.fasp-card--wide{grid-column:span 8}
-.fasp-card--actions{grid-column:span 4;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
-.fasp-checklist{padding-left:18px;margin:6px 0}
-.fasp-cards-row{display:flex;flex-wrap:wrap;gap:12px}
-.fasp-platform,.fasp-resource,.fasp-coach{flex:1 1 220px;background:#fafafa;border:1px solid #f1f5f9;padding:12px;border-radius:6px}
-.fasp-cta-small{display:inline-block;padding:6px 10px;background:#0ea5a4;color:#fff;border-radius:6px;text-decoration:none}
-.fasp-progress-placeholder{height:180px;border-radius:6px;border:1px dashed #e6eef3;display:flex;align-items:center;justify-content:center;color:#6b7280}
+/* FASP Dashboard layout & card sizing
+   This file tightens card widths, adds responsive behavior and
+   provides consistent spacing for the My Account dashboard cards.
+*/
 
-/* avatars and icons */
-.fasp-avatar { display:inline-block; vertical-align:middle; font-size:16px; line-height:1; text-align:center; border-radius:50%; overflow:hidden; width:44px; height:44px; }
-.fasp-avatar img { width:100%; height:100%; object-fit:cover; }
-.fasp-platform, .fasp-resource, .fasp-coach { transition: transform .12s ease, box-shadow .12s ease; }
-.fasp-platform:hover, .fasp-resource:hover, .fasp-coach:hover { transform: translateY(-4px); box-shadow: 0 6px 18px rgba(6, 95, 70, 0.06); }
-#faspProgressChart { width:100%; height:220px; display:block; }
-
-/* responsive */
-@media (max-width:900px){
-  .fasp-grid{grid-template-columns:repeat(6,1fr)}
-  .fasp-card{grid-column:span 6}
-  .fasp-card--wide{grid-column:span 6}
+.fasp-dashboard-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 18px;
+  box-sizing: border-box;
 }
-@media (max-width:540px){
-  .fasp-dash-header{flex-direction:column;align-items:flex-start}
-  .fasp-cta-secondary{margin-left:0}
+
+.fasp-dashboard-header {
+  margin-bottom: 16px;
+}
+
+.fasp-dashboard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: stretch;
+}
+
+.fasp-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 6px rgba(15, 15, 15, 0.04);
+  box-sizing: border-box;
+  color: #222;
+}
+
+.fasp-card--wide {
+  flex: 1 1 100%;
+  max-width: 100%;
+}
+
+.fasp-card--half {
+  flex: 1 1 calc(50% - 18px);
+  max-width: calc(50% - 18px);
+}
+
+/* Mini grid for quick actions in wide card */
+.fasp-grid-mini {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+
+.fasp-qa {
+  background:#f8f8f8;
+  color:#222;
+  padding:8px 10px;
+  border-radius:6px;
+  text-decoration:none;
+  display:inline-block;
+}
+
+/* Small screens */
+@media (max-width: 900px) {
+  .fasp-card--half {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+  .fasp-dashboard-wrap { padding: 12px; }
+}
+
+/* Typography adjustments */
+.fasp-dashboard h1,
+.fasp-dashboard h2,
+.fasp-card h3 {
+  margin: 0 0 8px 0;
+}
+
+.fasp-muted {
+  color: #6c6c6c;
+  line-height: 1.45;
 }
