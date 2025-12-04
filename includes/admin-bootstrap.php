@@ -17,3 +17,29 @@ if (!function_exists('fasp_classic_everywhere')){
   }
   add_action('init','fasp_classic_everywhere');
 }
+
+/**
+ * Load user dashboard and geo-gating modules.
+ * Guards ensure we don't emit warnings or re-declare functions if these
+ * files are already loaded by the main plugin bootstrap.
+ */
+
+if ( file_exists( __DIR__ . '/woocommerce-dashboard.php' ) && ! function_exists( 'fasp_wc_dashboard' ) ) {
+    require_once __DIR__ . '/woocommerce-dashboard.php';
+}
+
+if ( file_exists( __DIR__ . '/woocommerce-dashboard-assets.php' ) ) {
+    require_once __DIR__ . '/woocommerce-dashboard-assets.php';
+}
+
+if ( file_exists( __DIR__ . '/user-dashboard-loader.php' ) ) {
+    require_once __DIR__ . '/user-dashboard-loader.php';
+}
+
+if ( file_exists( __DIR__ . '/geo-gating.php' ) && ! function_exists( 'fasp_geo_gating_page' ) ) {
+    require_once __DIR__ . '/geo-gating.php';
+}
+
+if ( file_exists( __DIR__ . '/geo-gating-assets.php' ) ) {
+    require_once __DIR__ . '/geo-gating-assets.php';
+}

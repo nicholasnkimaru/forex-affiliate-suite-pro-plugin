@@ -174,3 +174,22 @@ require_once plugin_dir_path(__FILE__) . 'includes/fasp-webhooks.php';
 require_once plugin_dir_path(__FILE__) . 'includes/fasp-live-checkout.php';
 
 require_once plugin_dir_path(__FILE__) . 'includes/fasp-daraja.php';
+
+// FASP: user dashboard + assets (guarded)
+if ( file_exists( __DIR__ . '/woocommerce-dashboard.php' ) && ! function_exists( 'fasp_wc_dashboard' ) ) {
+    require_once __DIR__ . '/woocommerce-dashboard.php';
+}
+if ( file_exists( __DIR__ . '/woocommerce-dashboard-assets.php' ) ) {
+    require_once __DIR__ . '/woocommerce-dashboard-assets.php';
+}
+if ( file_exists( __DIR__ . '/user-dashboard-loader.php' ) ) {
+    require_once __DIR__ . '/user-dashboard-loader.php';
+}
+
+// FASP: geo gating + admin assets (guarded)
+if ( file_exists( __DIR__ . '/geo-gating.php' ) && ! function_exists( 'fasp_geo_gating_page' ) ) {
+    require_once __DIR__ . '/geo-gating.php';
+}
+if ( file_exists( __DIR__ . '/geo-gating-assets.php' ) ) {
+    require_once __DIR__ . '/geo-gating-assets.php';
+}
