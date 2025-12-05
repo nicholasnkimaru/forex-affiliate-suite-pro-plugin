@@ -91,17 +91,66 @@ if ( $current_user && $current_user->ID ) {
   </div>
 </div>
 
-<style>
-/* same small inline styles as before, kept minimal */
-.fasp-dashboard { display:flex; flex-wrap:wrap; gap:16px; }
-.fasp-card { padding:12px; border-radius:8px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
-.fasp-card--half { flex: 1 1 calc(50% - 16px); max-width: calc(50% - 16px); }
+<!-- <style>
+/* intermediate grey strength between the subtle and strong versions */
+:root {
+  --fasp-bg: #ffffff;
+  --fasp-card-bg: #f6f6f6;        /* intermediate grey */
+  --fasp-card-bg-wide: #f5f5f5;   /* slightly different for wide cards */
+  --fasp-card-border: rgba(0,0,0,0.09);
+  --fasp-card-shadow: 0 1px 4px rgba(0,0,0,0.065);
+  --fasp-gap: 16px;
+}
+
+.fasp-dashboard { display:flex; flex-wrap:wrap; gap:var(--fasp-gap); align-items:stretch; }
+
+/* base card */
+.fasp-card {
+  padding:18px;
+  border-radius:10px;
+  background:var(--fasp-card-bg);
+  border:1px solid var(--fasp-card-border);
+  box-shadow:var(--fasp-card-shadow);
+  transition:box-shadow .12s ease, transform .06s ease;
+  color: inherit;
+}
+
+/* slightly different background for full-width cards */
+.fasp-card--wide { background:var(--fasp-card-bg-wide); }
+
+/* keep halves reasonably sized */
+.fasp-card--half { flex: 1 1 calc(50% - var(--fasp-gap)); max-width: calc(50% - var(--fasp-gap)); }
+
+/* wide takes full width */
 .fasp-card--wide { flex: 1 1 100%; max-width:100%; }
+
+/* subtle interaction affordance */
+.fasp-card:hover { box-shadow: 0 8px 22px rgba(0,0,0,0.09); transform: translateY(-2px); }
+
+/* Responsive */
 @media (max-width:900px) {
   .fasp-card--half { flex:1 1 100%; max-width:100%; }
 }
+
+/* Header spacing and text */
+.fasp-dashboard-header { margin-bottom: 12px; }
 .fasp-dashboard-header h1 { margin:0 0 8px 0; font-size:1.6rem; }
-.fasp-muted { color:#6b6b6b; }
-.fasp-grid-mini { display:flex; gap:8px; flex-wrap:wrap; }
-.fasp-qa { display:inline-block; padding:6px 10px; background:#f4f4f4; border-radius:6px; text-decoration:none; color:#111; }
-</style>
+.fasp-muted { color:#606060; }
+
+/* Quick actions small button styling */
+.fasp-grid-mini { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.fasp-qa {
+  display:inline-block;
+  padding:7px 13px;
+  background:transparent;
+  border-radius:6px;
+  text-decoration:none;
+  color:#111;
+  border:1px solid rgba(0,0,0,0.06);
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(2px);
+}
+
+/* make the QA pills slightly more visible on top of the card background */
+.fasp-card--wide .fasp-qa { background: rgba(255,255,255,0.8); border-color: rgba(0,0,0,0.06); }
+</style> -->
