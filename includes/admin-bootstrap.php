@@ -43,3 +43,8 @@ if ( file_exists( __DIR__ . '/geo-gating.php' ) && ! function_exists( 'fasp_geo_
 if ( file_exists( __DIR__ . '/geo-gating-assets.php' ) ) {
     require_once __DIR__ . '/geo-gating-assets.php';
 }
+
+/* NEW: admin UI to mark users as affiliates (only admins) */
+if ( file_exists( __DIR__ . '/admin-user-affiliate-meta.php' ) ) {
+    require_once __DIR__ . '/admin-user-affiliate-meta.php';
+}
