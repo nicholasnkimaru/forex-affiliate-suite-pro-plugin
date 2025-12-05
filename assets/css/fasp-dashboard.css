@@ -1,79 +1,64 @@
-/* FASP Dashboard layout & card sizing
-   This file tightens card widths, adds responsive behavior and
-   provides consistent spacing for the My Account dashboard cards.
+/* FASP shared dashboard/card styles
+   Scoped to .fasp-dashboard / .fasp-card so they apply everywhere
+   where the plugin uses those classes.
 */
-
-.fasp-dashboard-wrap {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 18px;
-  box-sizing: border-box;
+:root {
+  --fasp-bg: #ffffff;
+  --fasp-card-bg: #f6f6f6;
+  --fasp-card-bg-wide: #f5f5f5;
+  --fasp-card-border: rgba(0,0,0,0.09);
+  --fasp-card-shadow: 0 1px 4px rgba(0,0,0,0.065);
+  --fasp-gap: 16px;
 }
 
-.fasp-dashboard-header {
-  margin-bottom: 16px;
-}
+.fasp-dashboard { display:flex; flex-wrap:wrap; gap:var(--fasp-gap); align-items:stretch; }
 
-.fasp-dashboard {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
-  align-items: stretch;
-}
-
+/* base card */
 .fasp-card {
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 14px 16px;
-  box-shadow: 0 1px 6px rgba(15, 15, 15, 0.04);
-  box-sizing: border-box;
-  color: #222;
+  padding:18px;
+  border-radius:10px;
+  background:var(--fasp-card-bg);
+  border:1px solid var(--fasp-card-border);
+  box-shadow:var(--fasp-card-shadow);
+  transition:box-shadow .12s ease, transform .06s ease;
+  color: inherit;
 }
 
-.fasp-card--wide {
-  flex: 1 1 100%;
-  max-width: 100%;
+/* slightly different background for full-width cards */
+.fasp-card--wide { background:var(--fasp-card-bg-wide); }
+
+/* keep halves reasonably sized */
+.fasp-card--half { flex: 1 1 calc(50% - var(--fasp-gap)); max-width: calc(50% - var(--fasp-gap)); }
+
+/* wide takes full width */
+.fasp-card--wide { flex: 1 1 100%; max-width:100%; }
+
+/* subtle interaction affordance */
+.fasp-card:hover { box-shadow: 0 8px 22px rgba(0,0,0,0.09); transform: translateY(-2px); }
+
+/* Responsive */
+@media (max-width:900px) {
+  .fasp-card--half { flex:1 1 100%; max-width:100%; }
 }
 
-.fasp-card--half {
-  flex: 1 1 calc(50% - 18px);
-  max-width: calc(50% - 18px);
-}
+/* Header spacing and text */
+.fasp-dashboard-header { margin-bottom: 12px; }
+.fasp-dashboard-header h1 { margin:0 0 8px 0; font-size:1.6rem; }
+.fasp-muted { color:#606060; }
 
-/* Mini grid for quick actions in wide card */
-.fasp-grid-mini {
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  margin-top:8px;
-}
-
+/* Quick actions small button styling */
+.fasp-grid-mini { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .fasp-qa {
-  background:#f8f8f8;
-  color:#222;
-  padding:8px 10px;
+  display:inline-block;
+  padding:7px 13px;
+  background:transparent;
   border-radius:6px;
   text-decoration:none;
-  display:inline-block;
+  color:#111;
+  border:1px solid rgba(0,0,0,0.06);
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(2px);
 }
 
-/* Small screens */
-@media (max-width: 900px) {
-  .fasp-card--half {
-    flex: 1 1 100%;
-    max-width: 100%;
-  }
-  .fasp-dashboard-wrap { padding: 12px; }
-}
-
-/* Typography adjustments */
-.fasp-dashboard h1,
-.fasp-dashboard h2,
-.fasp-card h3 {
-  margin: 0 0 8px 0;
-}
-
-.fasp-muted {
-  color: #6c6c6c;
-  line-height: 1.45;
-}
+/* make the QA pills slightly more visible on top of the card background */
+.fasp-card--wide .fasp-qa { background: rgba(255,255,255,0.8); border-color: rgba(0,0,0,0.06); }
