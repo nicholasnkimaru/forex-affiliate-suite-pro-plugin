@@ -175,6 +175,9 @@ require_once plugin_dir_path(__FILE__) . 'includes/fasp-live-checkout.php';
 
 require_once plugin_dir_path(__FILE__) . 'includes/fasp-daraja.php';
 
+// add this near the top with the other includes
+require_once plugin_dir_path( __FILE__ ) . 'includes/enqueue-styles.php';
+
 // FASP: user dashboard + assets (guarded)
 if ( file_exists( __DIR__ . '/woocommerce-dashboard.php' ) && ! function_exists( 'fasp_wc_dashboard' ) ) {
     require_once __DIR__ . '/woocommerce-dashboard.php';
@@ -193,3 +196,4 @@ if ( file_exists( __DIR__ . '/geo-gating.php' ) && ! function_exists( 'fasp_geo_
 if ( file_exists( __DIR__ . '/geo-gating-assets.php' ) ) {
     require_once __DIR__ . '/geo-gating-assets.php';
 }
+
