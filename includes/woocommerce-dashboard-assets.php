@@ -11,23 +11,29 @@ add_action('wp_enqueue_scripts', function() {
     return;
   }
 
-  $qv = get_query_var( 'forex-dashboard', false ) !== false ? array( 'forex-dashboard' => true ) : array();
+  // Check if we're on any of our dashboard endpoints
+  $endpoints = ['forex-dashboard', 'forex-affiliate', 'referrals', 'platforms', 'resources', 'coaches'];
+  $on_endpoint = false;
+  
+  foreach ($endpoints as $endpoint) {
+    if (get_query_var($endpoint, false) !== false) {
+      $on_endpoint = true;
+      break;
+    }
+  }
 
-  // If user is on the forex-dashboard account endpoint, enqueue assets
-  $has_endpoint = array_key_exists('forex-dashboard', $qv);
-
-  if ( $has_endpoint ) {
+  if ($on_endpoint) {
     wp_enqueue_style(
       'fasp-dashboard-css',
-      plugins_url('/assets/css/fasp-dashboard.css', dirname(__DIR__)),
+      plugins_url('/assets/css/fasp-dashboard.css', dirname(__FILE__)),
       [],
-      '1.0'
+      '1.1'
     );
     wp_enqueue_script(
       'fasp-dashboard-js',
-      plugins_url('/assets/js/fasp-dashboard.js', dirname(__DIR__)),
+      plugins_url('/assets/js/fasp-dashboard.js', dirname(__FILE__)),
       ['jquery'],
-      '1.0',
+      '1.1',
       true
     );
   }
