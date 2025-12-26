@@ -25,13 +25,13 @@ add_action('wp_enqueue_scripts', function() {
   if ($on_endpoint) {
     wp_enqueue_style(
       'fasp-dashboard-css',
-      plugins_url('/assets/css/fasp-dashboard.css', dirname(__FILE__)),
+      plugins_url('/assets/css/fasp-dashboard.css', dirname(__DIR__)),
       [],
       '1.1'
     );
     wp_enqueue_script(
       'fasp-dashboard-js',
-      plugins_url('/assets/js/fasp-dashboard.js', dirname(__FILE__)),
+      plugins_url('/assets/js/fasp-dashboard.js', dirname(__DIR__)),
       ['jquery'],
       '1.1',
       true

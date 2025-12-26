@@ -165,7 +165,7 @@ $account_url = function($endpoint){
           <tbody>
             <?php foreach ($recent_clicks as $click): ?>
               <tr>
-                <td><?php echo esc_html(date('M j, Y H:i', strtotime($click['created_at']))); ?></td>
+                <td><?php echo esc_html(mysql2date('M j, Y H:i', $click['created_at'])); ?></td>
                 <td><?php echo esc_html($click['platform']); ?></td>
                 <td>
                   <span style="padding: 3px 8px; border-radius: 3px; font-size: 12px; 
@@ -174,7 +174,15 @@ $account_url = function($endpoint){
                     <?php echo esc_html(ucfirst($click['action'])); ?>
                   </span>
                 </td>
-                <td><?php echo esc_html($click['ip']); ?></td>
+                <td><?php 
+                  // Mask IP for privacy (show only first 3 octets)
+                  $ip_parts = explode('.', $click['ip']);
+                  if (count($ip_parts) === 4) {
+                    echo esc_html($ip_parts[0] . '.' . $ip_parts[1] . '.' . $ip_parts[2] . '.xxx');
+                  } else {
+                    echo esc_html(substr($click['ip'], 0, -4) . 'xxxx');
+                  }
+                ?></td>
               </tr>
             <?php endforeach; ?>
           </tbody>

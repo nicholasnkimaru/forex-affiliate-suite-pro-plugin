@@ -114,7 +114,7 @@ function fasp_load_template($filename, $title) {
 
   echo '<div class="woocommerce-MyAccount-content">';
   echo '<h2>' . esc_html(sprintf(__('%s', 'fasp'), $title)) . '</h2>';
-  echo '<p>' . esc_html__('Page not available. Contact the site administrator.', 'fasp') . '</p>';
+  echo '<p>' . esc_html(sprintf(__('%s page not available. Contact the site administrator.', 'fasp'), $title)) . '</p>';
   echo '</div>';
 }
 ?>

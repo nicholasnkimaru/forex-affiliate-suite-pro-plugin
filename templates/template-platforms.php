@@ -127,7 +127,7 @@ $platforms = function_exists('fasp_get_platforms') ? fasp_get_platforms() : [];
       <h2><?php esc_html_e('How to Connect Your Account', 'fasp'); ?></h2>
       <ol style="margin: 12px 0; padding-left: 20px; line-height: 1.8;">
         <li><?php esc_html_e('Click "Open Account" or "Verify with OAuth" on your preferred platform above.', 'fasp'); ?></li>
-        <li><?php esc_html_e('Complete the registration or authentication process on the platform\'s website.', 'fasp'); ?></li>
+        <li><?php esc_html_e('Complete the registration or authentication process on the platform website.', 'fasp'); ?></li>
         <li><?php esc_html_e('Return to this page to see your verified status and access gated resources.', 'fasp'); ?></li>
         <li><?php esc_html_e('Some platforms may require KYC (Know Your Customer) verification for full access.', 'fasp'); ?></li>
       </ol>

@@ -59,8 +59,8 @@ $site_url = home_url();
           <?php esc_html_e('Your Referral Code:', 'fasp'); ?>
         </label>
         <input type="text" readonly value="<?php echo esc_attr($referral_code); ?>" 
-               style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;"
-               onclick="this.select(); document.execCommand('copy'); alert('Copied to clipboard!');">
+               class="fasp-copy-input"
+               style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">
       </div>
 
       <?php if (!empty($platforms)): ?>
@@ -75,8 +75,8 @@ $site_url = home_url();
               <strong><?php echo esc_html($platform['name']); ?></strong>
               <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
                 <input type="text" readonly value="<?php echo esc_url($referral_url); ?>" 
-                       style="flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; background: white;"
-                       onclick="this.select(); document.execCommand('copy'); alert('Copied to clipboard!');">
+                       class="fasp-copy-input"
+                       style="flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; background: white;">
                 <a href="<?php echo esc_url($referral_url); ?>" target="_blank" class="button button-small">
                   <?php esc_html_e('Test Link', 'fasp'); ?>
                 </a>
@@ -120,8 +120,7 @@ $site_url = home_url();
       <p class="fasp-muted"><?php esc_html_e('Copy and paste this code into your website.', 'fasp'); ?></p>
       
       <div style="margin-top: 16px;">
-        <textarea readonly style="width: 100%; height: 120px; padding: 8px; font-family: monospace; font-size: 11px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;"
-                  onclick="this.select(); document.execCommand('copy'); alert('Copied to clipboard!');"><a href="<?php echo esc_url(add_query_arg('ref', $referral_code, $site_url)); ?>" target="_blank">
+        <textarea readonly class="fasp-copy-textarea" style="width: 100%; height: 120px; padding: 8px; font-family: monospace; font-size: 11px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9; cursor: pointer;"><a href="<?php echo esc_url(add_query_arg('ref', $referral_code, $site_url)); ?>" target="_blank">
   Join the best trading platform
 </a></textarea>
         <p style="margin-top: 8px; font-size: 12px; color: #666;">
@@ -161,3 +160,88 @@ $site_url = home_url();
 
   </div>
 </div>
+
+<script>
+// Modern clipboard copy with fallback for older browsers
+function faspCopyToClipboard(text, button) {
+  // Try modern Clipboard API first
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      showCopySuccess(button);
+    }).catch(function() {
+      fallbackCopy(text, button);
+    });
+  } else {
+    fallbackCopy(text, button);
+  }
+}
+
+function fallbackCopy(text, button) {
+  var textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'fixed';
+  textArea.style.top = '0';
+  textArea.style.left = '0';
+  textArea.style.width = '2em';
+  textArea.style.height = '2em';
+  textArea.style.padding = '0';
+  textArea.style.border = 'none';
+  textArea.style.outline = 'none';
+  textArea.style.boxShadow = 'none';
+  textArea.style.background = 'transparent';
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  
+  try {
+    var successful = document.execCommand('copy');
+    if (successful) {
+      showCopySuccess(button);
+    }
+  } catch (err) {
+    console.error('Unable to copy', err);
+  }
+  
+  document.body.removeChild(textArea);
+}
+
+function showCopySuccess(element) {
+  var originalBg = element.style.background;
+  element.style.background = '#10b981';
+  var originalText = element.textContent || element.value;
+  
+  if (element.tagName === 'INPUT') {
+    var parent = element.parentElement;
+    if (parent) {
+      var notice = document.createElement('span');
+      notice.textContent = '✓ Copied!';
+      notice.style.color = '#10b981';
+      notice.style.marginLeft = '8px';
+      notice.style.fontSize = '14px';
+      notice.style.fontWeight = '600';
+      parent.appendChild(notice);
+      setTimeout(function() {
+        parent.removeChild(notice);
+      }, 2000);
+    }
+  } else {
+    alert('✓ Copied to clipboard!');
+  }
+  
+  setTimeout(function() {
+    element.style.background = originalBg;
+  }, 300);
+}
+
+// Attach to all readonly inputs and textareas on page
+document.addEventListener('DOMContentLoaded', function() {
+  var copyInputs = document.querySelectorAll('input[readonly][value], textarea[readonly]');
+  copyInputs.forEach(function(input) {
+    input.style.cursor = 'pointer';
+    input.addEventListener('click', function() {
+      this.select();
+      faspCopyToClipboard(this.value || this.textContent, this);
+    });
+  });
+});
+</script>
