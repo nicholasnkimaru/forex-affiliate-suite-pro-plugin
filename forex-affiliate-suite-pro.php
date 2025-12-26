@@ -21,6 +21,11 @@ add_action('wp_enqueue_scripts', function(){
 
 register_activation_hook(__FILE__, function(){
   add_rewrite_endpoint('forex-dashboard', EP_ROOT|EP_PAGES);
+  add_rewrite_endpoint('forex-affiliate', EP_ROOT|EP_PAGES);
+  add_rewrite_endpoint('referrals', EP_ROOT|EP_PAGES);
+  add_rewrite_endpoint('platforms', EP_ROOT|EP_PAGES);
+  add_rewrite_endpoint('resources', EP_ROOT|EP_PAGES);
+  add_rewrite_endpoint('coaches', EP_ROOT|EP_PAGES);
   if (function_exists('flush_rewrite_rules')) flush_rewrite_rules();
 });
 register_deactivation_hook(__FILE__, function(){ if (function_exists('flush_rewrite_rules')) flush_rewrite_rules(); });
@@ -83,6 +88,7 @@ add_action('admin_enqueue_scripts', function($hook){
 
 require_once __DIR__ . '/includes/admin-menu-hub.php';
 require_once __DIR__ . '/includes/admin-platforms.php';
+require_once __DIR__ . '/includes/admin-user-affiliate-meta.php';
 require_once __DIR__ . '/includes/routes-platforms.php';
 require_once __DIR__ . '/includes/cpt-resources.php';
 require_once __DIR__ . '/includes/cpt-coaches.php';
@@ -90,6 +96,7 @@ require_once __DIR__ . '/includes/admin-settings.php';
 require_once __DIR__ . '/includes/tracking.php';
 require_once __DIR__ . '/includes/gating.php';
 require_once __DIR__ . '/includes/woocommerce-dashboard.php';
+require_once __DIR__ . '/includes/admin-rewrite-notice.php';
 require_once __DIR__ . '/includes/shortcodes-join.php';
 require_once __DIR__ . '/includes/shortcodes-resources.php';
 require_once __DIR__ . '/includes/deriv-oauth.php';
