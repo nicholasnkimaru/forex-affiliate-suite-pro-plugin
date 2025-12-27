@@ -1,11 +1,11 @@
 <?php
-if (!defined('FASP_VERSION')) define('FASP_VERSION', 'r14.8');
+if (!defined('FASP_VERSION')) define('FASP_VERSION', 'r14.9');
 require_once __DIR__ . '/includes/menu-unifier.php';
 
 /**
  * Plugin Name: Forex Affiliate Suite PRO
  * Description: Unified affiliate funnels: Resources, Coaches, Landings, Ads/Pixels, Payments, Geo, Platform Gating, Analytics, Dashboard, Compliance.
- * Version: r14.8
+ * Version: r14.9
  * Author: Pashicom AppTech
  * License: GPLv2 or later
  */
@@ -100,6 +100,7 @@ require_once __DIR__ . '/includes/admin-placeholders.php';
 require_once __DIR__ . '/includes/coach-template-loader.php';
 require_once __DIR__ . '/includes/user-segmentation.php';
 require_once __DIR__ . '/includes/demo-live-tracking.php';
+require_once __DIR__ . '/includes/dashboard-analytics.php';
 
 require_once __DIR__ . '/includes/shortcodes-coaches.php';
 
