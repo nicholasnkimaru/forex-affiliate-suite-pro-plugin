@@ -21,6 +21,9 @@ add_action('wp_enqueue_scripts', function(){
 
 register_activation_hook(__FILE__, function(){
   add_rewrite_endpoint('forex-dashboard', EP_ROOT|EP_PAGES);
+  add_rewrite_endpoint('platforms', EP_ROOT|EP_PAGES);
+  add_rewrite_endpoint('resources', EP_ROOT|EP_PAGES);
+  add_rewrite_endpoint('coaches', EP_ROOT|EP_PAGES);
   if (function_exists('flush_rewrite_rules')) flush_rewrite_rules();
 });
 register_deactivation_hook(__FILE__, function(){ if (function_exists('flush_rewrite_rules')) flush_rewrite_rules(); });
