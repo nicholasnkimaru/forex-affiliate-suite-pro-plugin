@@ -62,3 +62,13 @@
 
 /* make the QA pills slightly more visible on top of the card background */
 .fasp-card--wide .fasp-qa { background: rgba(255,255,255,0.8); border-color: rgba(0,0,0,0.06); }
+
+/* Landing page styles */
+.fasp-landing .hero {
+  padding: 40px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.fasp-landing .cta-button {
+  margin-top: 18px;
+}
