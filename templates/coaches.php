@@ -40,7 +40,7 @@ $account_url = function($endpoint){
         $permalink = get_permalink($coach);
         $role = get_post_meta($coach->ID, '_fasp_coach_role', true);
         $intro = get_post_meta($coach->ID, '_fasp_coach_intro', true);
-        $photo_id = get_post_meta($coach->ID, '_fasp_coach_photo', true);
+        $photo_id = get_post_meta($coach->ID, '_fasp_coach_photo_id', true);
         $photo_url = $photo_id ? wp_get_attachment_image_url($photo_id, 'thumbnail') : '';
         ?>
         <div class="fasp-card fasp-card--half">
@@ -69,10 +69,14 @@ $account_url = function($endpoint){
     <?php endif; ?>
   </div>
 
-  <?php if (!empty($coaches) && count($coaches) >= 12): ?>
+  <?php 
+  // Only show archive link if archive is enabled and there are enough coaches
+  $archive_link = get_post_type_archive_link('fasp_coach');
+  if (!empty($coaches) && count($coaches) >= 12 && $archive_link): 
+  ?>
     <div class="fasp-archive-link">
       <p class="fasp-muted"><?php echo esc_html__('View all coaches in the', 'fasp'); ?> 
-        <a href="<?php echo esc_url(get_post_type_archive_link('fasp_coach')); ?>"><?php echo esc_html__('Coaches Directory', 'fasp'); ?></a>
+        <a href="<?php echo esc_url($archive_link); ?>"><?php echo esc_html__('Coaches Directory', 'fasp'); ?></a>
       </p>
     </div>
   <?php endif; ?>

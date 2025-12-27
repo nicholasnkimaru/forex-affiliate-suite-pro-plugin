@@ -90,7 +90,7 @@ $account_url = function($endpoint){
               <span class="fasp-status-unverified">❌ <?php echo esc_html__('Not Verified', 'fasp'); ?></span>
             <?php endif; ?>
           </p>
-          <?php if ($verify_button && !$is_verified): ?>
+          <?php if (!empty($verify_button) && !$is_verified): ?>
             <p><?php echo $verify_button; ?></p>
           <?php endif; ?>
         </div>

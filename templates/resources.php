@@ -62,10 +62,14 @@ $account_url = function($endpoint){
     <?php endif; ?>
   </div>
 
-  <?php if (!empty($resources) && count($resources) >= 12): ?>
+  <?php 
+  // Only show archive link if archive is enabled and there are enough resources
+  $archive_link = get_post_type_archive_link('fasp_resource');
+  if (!empty($resources) && count($resources) >= 12 && $archive_link): 
+  ?>
     <div class="fasp-archive-link">
       <p class="fasp-muted"><?php echo esc_html__('View all resources in the', 'fasp'); ?> 
-        <a href="<?php echo esc_url(get_post_type_archive_link('fasp_resource')); ?>"><?php echo esc_html__('Resources Archive', 'fasp'); ?></a>
+        <a href="<?php echo esc_url($archive_link); ?>"><?php echo esc_html__('Resources Archive', 'fasp'); ?></a>
       </p>
     </div>
   <?php endif; ?>
