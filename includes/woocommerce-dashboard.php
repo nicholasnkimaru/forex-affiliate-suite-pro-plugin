@@ -109,7 +109,11 @@ function fasp_wc_platforms() {
       echo '<h3>' . esc_html($platform['name'] ?? $slug) . '</h3>';
       echo '<p class="fasp-muted">' . esc_html($platform['excerpt'] ?? '') . '</p>';
       if (!empty($platform['affiliate_url'])) {
-        echo '<p><a class="button button-primary" href="' . esc_url($platform['affiliate_url']) . '" target="_blank" rel="noopener">' . esc_html__('Open Account', 'fasp') . '</a></p>';
+        // Additional validation: ensure URL is valid and uses http/https protocol
+        $url = esc_url($platform['affiliate_url'], array('http', 'https'));
+        if ($url && filter_var($url, FILTER_VALIDATE_URL)) {
+          echo '<p><a class="button button-primary" href="' . esc_url($url) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Open Account', 'fasp') . '</a></p>';
+        }
       }
       echo '</div>';
     }
@@ -134,11 +138,17 @@ function fasp_wc_resources() {
   echo '<p class="fasp-muted">' . esc_html__('Guides, onboarding materials and FAQ.', 'fasp') . '</p>';
   echo '</header>';
   
-  $resources = get_posts(array(
-    'post_type' => 'fasp_resource',
-    'posts_per_page' => 12,
-    'post_status' => 'publish',
-  ));
+  // Try to get cached resources first
+  $resources = get_transient('fasp_dashboard_resources');
+  if (false === $resources) {
+    $resources = get_posts(array(
+      'post_type' => 'fasp_resource',
+      'posts_per_page' => 12,
+      'post_status' => 'publish',
+    ));
+    // Cache for 1 hour
+    set_transient('fasp_dashboard_resources', $resources, HOUR_IN_SECONDS);
+  }
   
   if (!empty($resources)) {
     echo '<div class="fasp-dashboard">';
@@ -172,11 +182,17 @@ function fasp_wc_coaches() {
   echo '<p class="fasp-muted">' . esc_html__('Book sessions with our coaches to get started faster.', 'fasp') . '</p>';
   echo '</header>';
   
-  $coaches = get_posts(array(
-    'post_type' => 'fasp_coach',
-    'posts_per_page' => 12,
-    'post_status' => 'publish',
-  ));
+  // Try to get cached coaches first
+  $coaches = get_transient('fasp_dashboard_coaches');
+  if (false === $coaches) {
+    $coaches = get_posts(array(
+      'post_type' => 'fasp_coach',
+      'posts_per_page' => 12,
+      'post_status' => 'publish',
+    ));
+    // Cache for 1 hour
+    set_transient('fasp_dashboard_coaches', $coaches, HOUR_IN_SECONDS);
+  }
   
   if (!empty($coaches)) {
     echo '<div class="fasp-dashboard">';
@@ -197,5 +213,15 @@ function fasp_wc_coaches() {
     echo '<p>' . esc_html__('No coaches available yet.', 'fasp') . '</p>';
   }
   echo '</div>';
+}
+
+// Clear dashboard transients when resources or coaches are updated
+add_action('save_post_fasp_resource', 'fasp_clear_dashboard_transients');
+add_action('save_post_fasp_coach', 'fasp_clear_dashboard_transients');
+add_action('delete_post', 'fasp_clear_dashboard_transients');
+
+function fasp_clear_dashboard_transients($post_id = 0) {
+  delete_transient('fasp_dashboard_resources');
+  delete_transient('fasp_dashboard_coaches');
 }
 ?>
