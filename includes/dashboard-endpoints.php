@@ -8,6 +8,10 @@ if (!defined('ABSPATH')) exit;
  * - platforms: Browse and connect to trading platforms
  * - resources: Access educational resources and guides
  * - coaches: Meet and book coaching sessions
+ * 
+ * Note: After activating this plugin or updating endpoints, visit WordPress Admin > 
+ * Settings > Permalinks and click "Save Changes" to flush rewrite rules and activate 
+ * the new endpoints.
  */
 
 // Register endpoints
@@ -121,10 +125,13 @@ add_action('woocommerce_account_resources_endpoint', function() {
     if (empty($resources)) {
         echo '<p>' . esc_html__('No resources available yet. Check back soon!', 'fasp') . '</p>';
     } else {
+        // Get platforms once, outside the loop
+        $platforms = function_exists('fasp_get_platforms') ? fasp_get_platforms() : array();
+        
         echo '<div class="fasp-dashboard fasp-grid">';
         
         foreach ($resources as $resource) {
-            $thumbnail = get_the_post_thumbnail($resource->ID, 'medium', array('style' => 'width:100%;height:auto;border-radius:6px;'));
+            $thumbnail = get_the_post_thumbnail($resource->ID, 'medium', array('class' => 'fasp-resource-thumb'));
             $required_platform = get_post_meta($resource->ID, '_fasp_required_platform', true);
             
             echo '<div class="fasp-card fasp-card--half">';
@@ -135,11 +142,8 @@ add_action('woocommerce_account_resources_endpoint', function() {
             if ($resource->post_excerpt) {
                 echo '<p class="fasp-muted">' . esc_html($resource->post_excerpt) . '</p>';
             }
-            if ($required_platform) {
-                $platforms = function_exists('fasp_get_platforms') ? fasp_get_platforms() : array();
-                if (isset($platforms[$required_platform])) {
-                    echo '<p><small style="background:#f3f4f6;padding:2px 8px;border-radius:4px;">' . esc_html($platforms[$required_platform]['name']) . '</small></p>';
-                }
+            if ($required_platform && isset($platforms[$required_platform])) {
+                echo '<p><small style="background:#f3f4f6;padding:2px 8px;border-radius:4px;">' . esc_html($platforms[$required_platform]['name']) . '</small></p>';
             }
             echo '<p><a href="' . esc_url(get_permalink($resource->ID)) . '">' . esc_html__('Read More', 'fasp') . ' →</a></p>';
             echo '</div>';
@@ -174,7 +178,7 @@ add_action('woocommerce_account_coaches_endpoint', function() {
         echo '<div class="fasp-dashboard fasp-grid">';
         
         foreach ($coaches as $coach) {
-            $thumbnail = get_the_post_thumbnail($coach->ID, 'thumbnail', array('style' => 'width:80px;height:80px;border-radius:50%;object-fit:cover;'));
+            $thumbnail = get_the_post_thumbnail($coach->ID, 'thumbnail', array('class' => 'fasp-coach-avatar'));
             $role = get_post_meta($coach->ID, '_fasp_coach_role', true);
             $tagline = get_post_meta($coach->ID, '_fasp_coach_tagline', true);
             $years = get_post_meta($coach->ID, '_fasp_coach_years', true);
