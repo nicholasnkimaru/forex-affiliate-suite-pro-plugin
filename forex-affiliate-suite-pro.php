@@ -101,6 +101,7 @@ require_once __DIR__ . '/includes/coach-template-loader.php';
 require_once __DIR__ . '/includes/user-segmentation.php';
 require_once __DIR__ . '/includes/demo-live-tracking.php';
 require_once __DIR__ . '/includes/dashboard-analytics.php';
+require_once __DIR__ . '/includes/admin-analytics.php';
 
 require_once __DIR__ . '/includes/shortcodes-coaches.php';
 
