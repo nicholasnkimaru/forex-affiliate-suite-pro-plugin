@@ -112,7 +112,7 @@ function fasp_wc_platforms() {
         // Additional validation: ensure URL is valid and uses http/https protocol
         $url = esc_url($platform['affiliate_url'], array('http', 'https'));
         if ($url && filter_var($url, FILTER_VALIDATE_URL)) {
-          echo '<p><a class="button button-primary" href="' . $url . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Open Account', 'fasp') . '</a></p>';
+          echo '<p><a class="button button-primary" href="' . $url . '" target="_blank" rel="noopener noreferrer nofollow">' . esc_html__('Open Account', 'fasp') . '</a></p>';
         }
       }
       echo '</div>';
@@ -185,8 +185,9 @@ function fasp_wc_coaches() {
   // Try to get cached coaches first
   $coaches = get_transient('fasp_dashboard_coaches');
   if (false === $coaches) {
+    // Support both fasp_coach and fasp_coach_event post types
     $coaches = get_posts(array(
-      'post_type' => 'fasp_coach',
+      'post_type' => array('fasp_coach', 'fasp_coach_event'),
       'posts_per_page' => 12,
       'post_status' => 'publish',
     ));
