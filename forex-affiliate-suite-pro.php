@@ -98,6 +98,8 @@ require_once __DIR__ . '/includes/shortcodes-resources.php';
 require_once __DIR__ . '/includes/deriv-oauth.php';
 require_once __DIR__ . '/includes/admin-placeholders.php';
 require_once __DIR__ . '/includes/coach-template-loader.php';
+require_once __DIR__ . '/includes/user-segmentation.php';
+require_once __DIR__ . '/includes/demo-live-tracking.php';
 
 require_once __DIR__ . '/includes/shortcodes-coaches.php';
 
