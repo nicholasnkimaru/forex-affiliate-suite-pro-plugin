@@ -11,6 +11,12 @@
   --fasp-gap: 16px;
 }
 
+/* Dashboard wrapper */
+.fasp-dashboard-wrap {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
 .fasp-dashboard { display:flex; flex-wrap:wrap; gap:var(--fasp-gap); align-items:stretch; }
 
 /* base card */
@@ -62,3 +68,18 @@
 
 /* make the QA pills slightly more visible on top of the card background */
 .fasp-card--wide .fasp-qa { background: rgba(255,255,255,0.8); border-color: rgba(0,0,0,0.06); }
+
+/* WooCommerce My Account integration */
+.woocommerce-MyAccount-content .fasp-dashboard-wrap {
+  padding: 0;
+}
+
+/* Ensure links in cards are styled properly */
+.fasp-card a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.fasp-card a:hover {
+  text-decoration: underline;
+}
