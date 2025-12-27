@@ -87,7 +87,7 @@ function fasp_render_analytics_page() {
                             $percentage = $total > 0 ? ($count / $total) * 100 : 0;
                             ?>
                             <tr>
-                                <td><?php echo esc_html($activity['activity']); ?></td>
+                                <td><?php echo esc_html(str_replace('_', ' ', ucwords($activity['activity'], '_'))); ?></td>
                                 <td><?php echo $count; ?></td>
                                 <td>
                                     <div style="background: #ddd; height: 20px; border-radius: 10px; overflow: hidden;">
@@ -120,9 +120,10 @@ function fasp_render_analytics_page() {
                         $intensity = intval($item['intensity']);
                         $opacity = ($intensity / $max_intensity) * 0.9 + 0.1;
                         $color = "rgba(0, 115, 170, $opacity)";
+                        $activity_display = esc_html(str_replace('_', ' ', ucwords($item['activity'], '_')));
                     ?>
                         <div style="background: <?php echo $color; ?>; padding: 15px; border-radius: 6px; text-align: center; color: <?php echo $opacity > 0.5 ? '#fff' : '#333'; ?>;">
-                            <strong><?php echo esc_html($item['activity']); ?></strong><br>
+                            <strong><?php echo $activity_display; ?></strong><br>
                             <span style="font-size: 1.5em;"><?php echo $intensity; ?></span>
                         </div>
                     <?php endforeach; ?>

@@ -110,7 +110,8 @@ function fasp_get_activity_heatmap() {
         return array();
     }
     
-    $date_from = date('Y-m-d H:i:s', strtotime('-7 days'));
+    $date_from = current_time('mysql', true);
+    $date_from = date('Y-m-d H:i:s', strtotime('-7 days', strtotime($date_from)));
     
     $heatmap = $wpdb->get_results($wpdb->prepare(
         "SELECT activity, COUNT(*) as intensity 

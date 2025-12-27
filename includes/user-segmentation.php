@@ -20,8 +20,8 @@ function fasp_get_user_segment($user_id = 0) {
     $user = get_userdata($user_id);
     if (!$user) return 'novice';
     
-    // Check if user is affiliate
-    if (current_user_can('manage_options')) {
+    // Check if user is affiliate (use user object instead of current_user_can for specific user)
+    if (in_array('administrator', (array) $user->roles, true)) {
         return 'affiliate';
     }
     
