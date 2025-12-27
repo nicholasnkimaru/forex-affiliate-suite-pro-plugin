@@ -100,7 +100,7 @@ $referral_stats = $is_affiliate && function_exists('fasp_get_user_referral_stats
           <?php elseif ($demo_account): ?>
             <div class="fasp-performance-card fasp-upgrade">
               <h3><?php esc_html_e('Ready to Go Live?', 'fasp'); ?></h3>
-              <p class="fasp-muted"><?php esc_html_e('You\'ve practiced enough. Open a live account to start real trading.', 'fasp'); ?></p>
+              <p class="fasp-muted"><?php esc_html_e('You have practiced enough. Open a live account to start real trading.', 'fasp'); ?></p>
               <p>
                 <a class="button button-primary" href="<?php echo esc_url( $account_url('platforms') ); ?>"><?php esc_html_e('Open Live Account', 'fasp'); ?></a>
               </p>

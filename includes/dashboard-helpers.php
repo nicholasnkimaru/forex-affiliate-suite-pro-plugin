@@ -44,7 +44,7 @@ function fasp_is_affiliate($user_id = null) {
  * Determine user experience level
  * 
  * @param int $user_id User ID
- * @return string 'novice', 'experienced', or 'expert'
+ * @return string 'novice', 'intermediate', or 'experienced'
  */
 function fasp_get_user_experience_level($user_id = null) {
     if (!$user_id) {
@@ -55,6 +55,12 @@ function fasp_get_user_experience_level($user_id = null) {
     $level = get_user_meta($user_id, 'fasp_experience_level', true);
     if ($level) {
         return $level;
+    }
+    
+    // Get user data once for reuse
+    $user = get_userdata($user_id);
+    if (!$user) {
+        return 'novice';
     }
     
     // Auto-detect based on activity
@@ -69,12 +75,9 @@ function fasp_get_user_experience_level($user_id = null) {
     }
     
     // Check account age
-    $user = get_userdata($user_id);
     $account_age_days = 0;
-    if ($user) {
-        $registered = strtotime($user->user_registered);
-        $account_age_days = floor((time() - $registered) / (60 * 60 * 24));
-    }
+    $registered = strtotime($user->user_registered);
+    $account_age_days = floor((time() - $registered) / (60 * 60 * 24));
     
     // Determine experience level
     if ($verified_platforms >= 2 || $account_age_days > 90) {
