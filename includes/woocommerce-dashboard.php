@@ -4,40 +4,57 @@ if (!defined('ABSPATH')) exit;
 /**
  * Frontend WooCommerce My Account integration — minimal and neutral.
  *
- * - Register only the neutral 'forex-dashboard' endpoint for frontend.
+ * - Register neutral endpoints: forex-dashboard, platforms, resources, coaches
  * - Do NOT register or expose the 'forex-affiliate' endpoint here.
- * - Inject only neutral 'Forex Trading' menu item into My Account.
- * - Route only 'forex-dashboard' to our dashboard template loader.
+ * - Inject only neutral menu items into My Account.
+ * - Route endpoints to appropriate template loaders.
  */
 
-// Register only forex-dashboard (frontend)
+// Register frontend endpoints
 add_action('init', function() {
   add_rewrite_endpoint('forex-dashboard', EP_ROOT | EP_PAGES);
+  add_rewrite_endpoint('platforms', EP_ROOT | EP_PAGES);
+  add_rewrite_endpoint('resources', EP_ROOT | EP_PAGES);
+  add_rewrite_endpoint('coaches', EP_ROOT | EP_PAGES);
 });
 
-// Add to query vars (only forex-dashboard)
+// Add to query vars
 add_filter('query_vars', function($vars) {
   $vars[] = 'forex-dashboard';
+  $vars[] = 'platforms';
+  $vars[] = 'resources';
+  $vars[] = 'coaches';
   return $vars;
 });
 
-// Inject only neutral "Forex Trading" into My Account menu; do NOT add "Forex Affiliate"
+// Inject neutral menu items into My Account menu
 add_filter('woocommerce_account_menu_items', function($items) {
   $new = array();
 
   foreach ($items as $key => $label) {
     $new[$key] = $label;
 
-    // After the default dashboard item, insert the neutral trading dashboard link
+    // After the default dashboard item, insert trading-related links
     if ($key === 'dashboard') {
       $new['forex-dashboard'] = __('Forex Trading', 'fasp');
-      // Intentionally do NOT add forex-affiliate here.
+      $new['platforms'] = __('Platforms', 'fasp');
+      $new['resources'] = __('Resources', 'fasp');
+      $new['coaches'] = __('Coaches', 'fasp');
     }
   }
 
-  // Ensure forex-dashboard exists (fallback)
+  // Ensure endpoints exist (fallback)
   if (!isset($new['forex-dashboard'])) {
     $new['forex-dashboard'] = __('Forex Trading', 'fasp');
+  }
+  if (!isset($new['platforms'])) {
+    $new['platforms'] = __('Platforms', 'fasp');
+  }
+  if (!isset($new['resources'])) {
+    $new['resources'] = __('Resources', 'fasp');
+  }
+  if (!isset($new['coaches'])) {
+    $new['coaches'] = __('Coaches', 'fasp');
   }
 
   // Ensure forex-affiliate is not present on frontend menus
@@ -48,8 +65,11 @@ add_filter('woocommerce_account_menu_items', function($items) {
   return $new;
 }, 20);
 
-// Route the neutral endpoint to the template loader
+// Route the neutral endpoints to template loaders
 add_action('woocommerce_account_forex-dashboard_endpoint', 'fasp_wc_dashboard');
+add_action('woocommerce_account_platforms_endpoint', 'fasp_wc_platforms');
+add_action('woocommerce_account_resources_endpoint', 'fasp_wc_resources');
+add_action('woocommerce_account_coaches_endpoint', 'fasp_wc_coaches');
 
 function fasp_wc_dashboard() {
   $tpl = dirname(__DIR__) . '/templates/dashboard.php';
@@ -62,5 +82,149 @@ function fasp_wc_dashboard() {
   echo '<h2>' . esc_html__('Trading Dashboard', 'fasp') . '</h2>';
   echo '<p>' . esc_html__('Dashboard not available. Contact the site administrator.', 'fasp') . '</p>';
   echo '</div>';
+}
+
+function fasp_wc_platforms() {
+  $tpl = dirname(__DIR__) . '/templates/platforms.php';
+  if (file_exists($tpl)) {
+    include $tpl;
+    return;
+  }
+
+  // Fallback: display platforms inline
+  echo '<div class="woocommerce-MyAccount-content fasp-dashboard-wrap">';
+  echo '<header class="fasp-dashboard-header">';
+  echo '<h1>' . esc_html__('Trading Platforms', 'fasp') . '</h1>';
+  echo '<p class="fasp-muted">' . esc_html__('Available trading platforms and setup instructions.', 'fasp') . '</p>';
+  echo '</header>';
+  
+  $platforms = get_option('fasp_platforms', array());
+  if (!empty($platforms)) {
+    echo '<div class="fasp-dashboard">';
+    foreach ($platforms as $slug => $platform) {
+      if (isset($platform['visible_in_dashboard']) && !$platform['visible_in_dashboard']) {
+        continue;
+      }
+      echo '<div class="fasp-card fasp-card--half">';
+      echo '<h3>' . esc_html($platform['name'] ?? $slug) . '</h3>';
+      echo '<p class="fasp-muted">' . esc_html($platform['excerpt'] ?? '') . '</p>';
+      if (!empty($platform['affiliate_url'])) {
+        // Additional validation: ensure URL is valid and uses http/https protocol
+        $url = esc_url($platform['affiliate_url'], array('http', 'https'));
+        if ($url && filter_var($url, FILTER_VALIDATE_URL)) {
+          echo '<p><a class="button button-primary" href="' . $url . '" target="_blank" rel="noopener noreferrer nofollow">' . esc_html__('Open Account', 'fasp') . '</a></p>';
+        }
+      }
+      echo '</div>';
+    }
+    echo '</div>';
+  } else {
+    echo '<p>' . esc_html__('No platforms configured yet.', 'fasp') . '</p>';
+  }
+  echo '</div>';
+}
+
+function fasp_wc_resources() {
+  $tpl = dirname(__DIR__) . '/templates/resources.php';
+  if (file_exists($tpl)) {
+    include $tpl;
+    return;
+  }
+
+  // Fallback: display resources inline
+  echo '<div class="woocommerce-MyAccount-content fasp-dashboard-wrap">';
+  echo '<header class="fasp-dashboard-header">';
+  echo '<h1>' . esc_html__('Resources', 'fasp') . '</h1>';
+  echo '<p class="fasp-muted">' . esc_html__('Guides, onboarding materials and FAQ.', 'fasp') . '</p>';
+  echo '</header>';
+  
+  // Try to get cached resources first
+  $resources = get_transient('fasp_dashboard_resources');
+  if (false === $resources) {
+    $resources = get_posts(array(
+      'post_type' => 'fasp_resource',
+      'posts_per_page' => 12,
+      'post_status' => 'publish',
+    ));
+    // Cache for 1 hour
+    set_transient('fasp_dashboard_resources', $resources, HOUR_IN_SECONDS);
+  }
+  
+  if (!empty($resources)) {
+    echo '<div class="fasp-dashboard">';
+    foreach ($resources as $resource) {
+      echo '<div class="fasp-card fasp-card--half">';
+      echo '<h3><a href="' . esc_url(get_permalink($resource->ID)) . '">' . esc_html($resource->post_title) . '</a></h3>';
+      if ($resource->post_excerpt) {
+        echo '<p class="fasp-muted">' . esc_html($resource->post_excerpt) . '</p>';
+      }
+      echo '<p><a href="' . esc_url(get_permalink($resource->ID)) . '">' . esc_html__('Read More', 'fasp') . '</a></p>';
+      echo '</div>';
+    }
+    echo '</div>';
+  } else {
+    echo '<p>' . esc_html__('No resources available yet.', 'fasp') . '</p>';
+  }
+  echo '</div>';
+}
+
+function fasp_wc_coaches() {
+  $tpl = dirname(__DIR__) . '/templates/coaches.php';
+  if (file_exists($tpl)) {
+    include $tpl;
+    return;
+  }
+
+  // Fallback: display coaches inline
+  echo '<div class="woocommerce-MyAccount-content fasp-dashboard-wrap">';
+  echo '<header class="fasp-dashboard-header">';
+  echo '<h1>' . esc_html__('Coaches', 'fasp') . '</h1>';
+  echo '<p class="fasp-muted">' . esc_html__('Book sessions with our coaches to get started faster.', 'fasp') . '</p>';
+  echo '</header>';
+  
+  // Try to get cached coaches first
+  $coaches = get_transient('fasp_dashboard_coaches');
+  if (false === $coaches) {
+    // Support both fasp_coach and fasp_coach_event post types
+    $coaches = get_posts(array(
+      'post_type' => array('fasp_coach', 'fasp_coach_event'),
+      'posts_per_page' => 12,
+      'post_status' => 'publish',
+    ));
+    // Cache for 1 hour
+    set_transient('fasp_dashboard_coaches', $coaches, HOUR_IN_SECONDS);
+  }
+  
+  if (!empty($coaches)) {
+    echo '<div class="fasp-dashboard">';
+    foreach ($coaches as $coach) {
+      echo '<div class="fasp-card fasp-card--half">';
+      if (has_post_thumbnail($coach->ID)) {
+        echo '<p>' . get_the_post_thumbnail($coach->ID, 'thumbnail') . '</p>';
+      }
+      echo '<h3><a href="' . esc_url(get_permalink($coach->ID)) . '">' . esc_html($coach->post_title) . '</a></h3>';
+      if ($coach->post_excerpt) {
+        echo '<p class="fasp-muted">' . esc_html($coach->post_excerpt) . '</p>';
+      }
+      echo '<p><a href="' . esc_url(get_permalink($coach->ID)) . '">' . esc_html__('View Profile', 'fasp') . '</a></p>';
+      echo '</div>';
+    }
+    echo '</div>';
+  } else {
+    echo '<p>' . esc_html__('No coaches available yet.', 'fasp') . '</p>';
+  }
+  echo '</div>';
+}
+
+// Clear dashboard transients when resources or coaches are updated
+// Supports both fasp_coach and fasp_coach_event post types
+add_action('save_post_fasp_resource', 'fasp_clear_dashboard_transients');
+add_action('save_post_fasp_coach', 'fasp_clear_dashboard_transients');
+add_action('save_post_fasp_coach_event', 'fasp_clear_dashboard_transients');
+add_action('delete_post', 'fasp_clear_dashboard_transients');
+
+function fasp_clear_dashboard_transients($post_id = 0) {
+  delete_transient('fasp_dashboard_resources');
+  delete_transient('fasp_dashboard_coaches');
 }
 ?>
