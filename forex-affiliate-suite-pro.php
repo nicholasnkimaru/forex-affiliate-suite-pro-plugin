@@ -90,6 +90,7 @@ require_once __DIR__ . '/includes/admin-settings.php';
 require_once __DIR__ . '/includes/tracking.php';
 require_once __DIR__ . '/includes/gating.php';
 require_once __DIR__ . '/includes/woocommerce-dashboard.php';
+require_once __DIR__ . '/includes/dashboard-endpoints.php';
 require_once __DIR__ . '/includes/shortcodes-join.php';
 require_once __DIR__ . '/includes/shortcodes-resources.php';
 require_once __DIR__ . '/includes/deriv-oauth.php';

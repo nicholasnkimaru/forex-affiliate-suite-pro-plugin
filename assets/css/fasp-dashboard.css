@@ -62,3 +62,19 @@
 
 /* make the QA pills slightly more visible on top of the card background */
 .fasp-card--wide .fasp-qa { background: rgba(255,255,255,0.8); border-color: rgba(0,0,0,0.06); }
+
+/* Resource thumbnail styling */
+.fasp-resource-thumb {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+/* Coach avatar styling */
+.fasp-coach-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+}
