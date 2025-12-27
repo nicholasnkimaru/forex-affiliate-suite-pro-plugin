@@ -43,7 +43,7 @@ $account_url = function($endpoint){
         ?>
         <div class="fasp-card fasp-card--half">
           <?php if ($thumbnail): ?>
-            <div style="margin-bottom: 12px;">
+            <div class="fasp-resource-thumbnail">
               <?php echo $thumbnail; ?>
             </div>
           <?php endif; ?>
@@ -63,7 +63,7 @@ $account_url = function($endpoint){
   </div>
 
   <?php if (!empty($resources) && count($resources) >= 12): ?>
-    <div style="margin-top: 20px; text-align: center;">
+    <div class="fasp-archive-link">
       <p class="fasp-muted"><?php echo esc_html__('View all resources in the', 'fasp'); ?> 
         <a href="<?php echo esc_url(get_post_type_archive_link('fasp_resource')); ?>"><?php echo esc_html__('Resources Archive', 'fasp'); ?></a>
       </p>

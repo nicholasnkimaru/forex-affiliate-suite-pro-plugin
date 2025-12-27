@@ -72,3 +72,52 @@
 .fasp-landing .cta-button {
   margin-top: 18px;
 }
+
+/* Coach card header styles */
+.fasp-coach-header {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.fasp-coach-photo {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #e5e7eb;
+}
+
+.fasp-coach-info {
+  flex: 1;
+}
+
+.fasp-coach-info h3 {
+  margin: 0 0 4px 0;
+}
+
+.fasp-coach-role {
+  margin: 0;
+  font-size: 0.9em;
+}
+
+/* Platform status indicators */
+.fasp-status-verified {
+  color: #16a34a;
+}
+
+.fasp-status-unverified {
+  color: #dc2626;
+}
+
+/* Resource thumbnail */
+.fasp-resource-thumbnail {
+  margin-bottom: 12px;
+}
+
+/* Archive link section */
+.fasp-archive-link {
+  margin-top: 20px;
+  text-align: center;
+}

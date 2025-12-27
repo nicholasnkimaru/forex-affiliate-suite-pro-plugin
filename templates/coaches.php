@@ -44,14 +44,14 @@ $account_url = function($endpoint){
         $photo_url = $photo_id ? wp_get_attachment_image_url($photo_id, 'thumbnail') : '';
         ?>
         <div class="fasp-card fasp-card--half">
-          <div style="display: flex; gap: 12px; align-items: start; margin-bottom: 12px;">
+          <div class="fasp-coach-header">
             <?php if ($photo_url): ?>
-              <img src="<?php echo esc_url($photo_url); ?>" alt="<?php echo esc_attr($title); ?>" style="width: 60px; height: 60px; object-fit: cover; border-radius: 50%; border: 2px solid #e5e7eb;">
+              <img src="<?php echo esc_url($photo_url); ?>" alt="<?php echo esc_attr($title); ?>" class="fasp-coach-photo">
             <?php endif; ?>
-            <div style="flex: 1;">
-              <h3 style="margin: 0 0 4px 0;"><?php echo esc_html($title); ?></h3>
+            <div class="fasp-coach-info">
+              <h3><?php echo esc_html($title); ?></h3>
               <?php if ($role): ?>
-                <p class="fasp-muted" style="margin: 0; font-size: 0.9em;"><?php echo esc_html($role); ?></p>
+                <p class="fasp-muted fasp-coach-role"><?php echo esc_html($role); ?></p>
               <?php endif; ?>
             </div>
           </div>
@@ -70,7 +70,7 @@ $account_url = function($endpoint){
   </div>
 
   <?php if (!empty($coaches) && count($coaches) >= 12): ?>
-    <div style="margin-top: 20px; text-align: center;">
+    <div class="fasp-archive-link">
       <p class="fasp-muted"><?php echo esc_html__('View all coaches in the', 'fasp'); ?> 
         <a href="<?php echo esc_url(get_post_type_archive_link('fasp_coach')); ?>"><?php echo esc_html__('Coaches Directory', 'fasp'); ?></a>
       </p>
