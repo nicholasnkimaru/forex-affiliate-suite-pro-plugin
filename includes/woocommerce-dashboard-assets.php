@@ -2,8 +2,8 @@
 if (!defined('ABSPATH')) exit;
 
 /**
- * Enqueue frontend assets for the dashboard endpoints.
- * NOTE: Only the user-facing 'forex-dashboard' endpoint is considered here.
+ * Enqueue frontend JavaScript for the dashboard endpoints.
+ * NOTE: CSS is now handled by includes/enqueue-styles.php
  */
 
 add_action('wp_enqueue_scripts', function() {
@@ -13,23 +13,21 @@ add_action('wp_enqueue_scripts', function() {
 
   $qv = get_query_var( 'forex-dashboard', false ) !== false ? array( 'forex-dashboard' => true ) : array();
 
-  // If user is on the forex-dashboard account endpoint, enqueue assets
+  // If user is on the forex-dashboard account endpoint, enqueue JS
   $has_endpoint = array_key_exists('forex-dashboard', $qv);
 
   if ( $has_endpoint ) {
-    wp_enqueue_style(
-      'fasp-dashboard-css',
-      plugins_url('/assets/css/fasp-dashboard.css', dirname(__DIR__)),
-      [],
-      '1.0'
-    );
-    wp_enqueue_script(
-      'fasp-dashboard-js',
-      plugins_url('/assets/js/fasp-dashboard.js', dirname(__DIR__)),
-      ['jquery'],
-      '1.0',
-      true
-    );
+    // Check if JS file exists before enqueuing
+    $js_path = plugin_dir_path( dirname(__FILE__) ) . 'assets/js/fasp-dashboard.js';
+    if ( file_exists($js_path) ) {
+      wp_enqueue_script(
+        'fasp-dashboard-js',
+        plugins_url('/assets/js/fasp-dashboard.js', dirname(__FILE__)),
+        ['jquery'],
+        '1.0',
+        true
+      );
+    }
   }
 });
 ?>
