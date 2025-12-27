@@ -112,7 +112,7 @@ function fasp_wc_platforms() {
         // Additional validation: ensure URL is valid and uses http/https protocol
         $url = esc_url($platform['affiliate_url'], array('http', 'https'));
         if ($url && filter_var($url, FILTER_VALIDATE_URL)) {
-          echo '<p><a class="button button-primary" href="' . esc_url($url) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Open Account', 'fasp') . '</a></p>';
+          echo '<p><a class="button button-primary" href="' . $url . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Open Account', 'fasp') . '</a></p>';
         }
       }
       echo '</div>';
