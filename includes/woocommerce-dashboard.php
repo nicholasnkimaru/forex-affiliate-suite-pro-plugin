@@ -216,8 +216,10 @@ function fasp_wc_coaches() {
 }
 
 // Clear dashboard transients when resources or coaches are updated
+// Supports both fasp_coach and fasp_coach_event post types
 add_action('save_post_fasp_resource', 'fasp_clear_dashboard_transients');
 add_action('save_post_fasp_coach', 'fasp_clear_dashboard_transients');
+add_action('save_post_fasp_coach_event', 'fasp_clear_dashboard_transients');
 add_action('delete_post', 'fasp_clear_dashboard_transients');
 
 function fasp_clear_dashboard_transients($post_id = 0) {
