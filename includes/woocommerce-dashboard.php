@@ -96,6 +96,11 @@ function fasp_wc_platforms() {
 }
 
 function fasp_wc_resources() {
+  // Track that user viewed resources
+  if (is_user_logged_in()) {
+    update_user_meta(get_current_user_id(), 'fasp_viewed_resources', time());
+  }
+  
   $tpl = dirname(__DIR__) . '/templates/resources.php';
   if (file_exists($tpl)) {
     include $tpl;
@@ -109,6 +114,11 @@ function fasp_wc_resources() {
 }
 
 function fasp_wc_coaches() {
+  // Track that user viewed coaches
+  if (is_user_logged_in()) {
+    update_user_meta(get_current_user_id(), 'fasp_viewed_coaches', time());
+  }
+  
   $tpl = dirname(__DIR__) . '/templates/coaches.php';
   if (file_exists($tpl)) {
     include $tpl;

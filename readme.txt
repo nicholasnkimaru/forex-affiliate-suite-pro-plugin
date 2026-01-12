@@ -1,5 +1,16 @@
 === Forex Affiliate Suite Pro ===
 
+== r14.9 Additions ==
+* User segmentation: Automatic detection of Novice, Regular Trader, and Affiliate user types
+* Demo vs Live Trading widget: Visual comparison of trading performance across accounts
+* Demo-to-Live CTA: Smart call-to-action encouraging transition from demo to live trading
+* Onboarding progress tracking: Visual progress bar and checklist for new users
+* Affiliate dashboard: Dedicated section showing referrals, earnings, and performance metrics
+* Educational resources panel: Organized tutorials, FAQs, and market news sections
+* Dashboard analytics & heatmaps: Comprehensive activity tracking and user behavior analysis
+* Mobile optimization: Enhanced responsive design for all dashboard features
+* Motivational nudges: Contextual encouragement for users approaching completion milestones
+
 == r14.2 Additions ==
 * Unified Payments admin with tabs for PayPal / Stripe / Flutterwave / Paystack / M‑Pesa
 * M‑Pesa options: Till, Paybill, or Both — with credentials, callback URL, and environment
