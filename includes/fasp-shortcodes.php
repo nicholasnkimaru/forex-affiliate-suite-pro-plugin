@@ -6,7 +6,13 @@ if (!defined('ABSPATH')) exit;
  * - [fasp_checkout], [fasp_stk_status], [fasp_receipt], [fasp_usdt_wallet]
  */
 
-function fasp_payopt(){ return get_option('fasp_payments', []); }
+function fasp_payopt(){
+    // Use canonical accessor if available for runtime normalization
+    if (function_exists('fasp_get_payments')) {
+        return fasp_get_payments();
+    }
+    return get_option('fasp_payments', []);
+}
 
 add_shortcode('fasp_checkout', function($atts){
     $a = shortcode_atts([
@@ -182,13 +188,14 @@ add_shortcode('fasp_receipt', function($atts){
 // Helper: get preferred/specific USDT wallet + shortcode
 if (!function_exists('fasp_get_usdt_wallet')){
 function fasp_get_usdt_wallet($type=''){
-    $opt = get_option('fasp_payments', []);
-    $c = isset($opt['crypto']) && is_array($opt['crypto']) ? $opt['crypto'] : [];
-    $pref = isset($c['preferred']) ? $c['preferred'] : 'trc20';
+    // Use canonical accessor if available
+    $payments = function_exists('fasp_get_payments') ? fasp_get_payments() : get_option('fasp_payments', []);
+    $c = isset($payments['crypto']) && is_array($payments['crypto']) ? $payments['crypto'] : [];
+    $pref = isset($c['chain']) ? $c['chain'] : (isset($c['preferred']) ? $c['preferred'] : 'trc20');
     $type = $type ? strtolower($type) : $pref;
-    if ($type==='trc20') return isset($c['trc20_wallet']) ? $c['trc20_wallet'] : '';
-    if ($type==='erc20') return isset($c['erc20_wallet']) ? $c['erc20_wallet'] : '';
-    if ($type==='bep20') return isset($c['bep20_wallet']) ? $c['bep20_wallet'] : '';
+    if ($type==='trc20') return isset($c['trc20']) ? $c['trc20'] : (isset($c['trc20_wallet']) ? $c['trc20_wallet'] : '');
+    if ($type==='erc20') return isset($c['erc20']) ? $c['erc20'] : (isset($c['erc20_wallet']) ? $c['erc20_wallet'] : '');
+    if ($type==='bep20') return isset($c['bep20']) ? $c['bep20'] : (isset($c['bep20_wallet']) ? $c['bep20_wallet'] : '');
     return '';
 }}
 add_shortcode('fasp_usdt_wallet', function($atts){

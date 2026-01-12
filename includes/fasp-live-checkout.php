@@ -6,6 +6,17 @@ if (!defined('ABSPATH')) exit;
  * Stripe Checkout, Flutterwave Payments, Paystack Initialize, M-Pesa STK Push
  */
 
+// Currency whitelist for validation
+define('FASP_ALLOWED_CURRENCIES', array(
+    'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'CNY', 'INR', 'BRL',
+    'KES', 'ZAR', 'NGN', 'GHS', 'UGX', 'TZS', 'RWF', 'ETB', 'XOF', 'XAF',
+    'AED', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR', 'MYR', 'SGD', 'HKD', 'TWD',
+    'THB', 'PHP', 'IDR', 'VND', 'PKR', 'BDT', 'LKR', 'NPR', 'MXN', 'COP',
+    'CLP', 'PEN', 'ARS', 'PLN', 'CZK', 'HUF', 'RON', 'BGN', 'SEK', 'NOK',
+    'DKK', 'ISK', 'NZD', 'ZMW', 'MWK', 'BWP', 'NAD', 'MZN', 'AOA', 'EGP',
+    'MAD', 'TND', 'DZD', 'LYD', 'JOD', 'ILS', 'TRY', 'RUB', 'UAH', 'KZT'
+));
+
 function fasp_json($arr, $code=200){
     status_header($code);
     header('Content-Type: application/json; charset=utf-8');
@@ -13,26 +24,92 @@ function fasp_json($arr, $code=200){
     exit;
 }
 
+/**
+ * Check rate limiting for AJAX requests.
+ *
+ * @param string $action The action being rate-limited.
+ * @return bool True if rate-limited, false otherwise.
+ */
+function fasp_check_ajax_rate_limit($action = 'checkout') {
+    $ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field($_SERVER['REMOTE_ADDR']) : 'unknown';
+    $key = $action . '_' . $ip;
+
+    if (function_exists('fasp_is_request_rate_limited') && fasp_is_request_rate_limited($key, 5, 60)) {
+        return true;
+    }
+
+    if (function_exists('fasp_increment_request_count')) {
+        fasp_increment_request_count($key, 60);
+    }
+
+    return false;
+}
+
+/**
+ * Validate nonce for AJAX requests.
+ * Allows authenticated users without nonce as fallback.
+ *
+ * @return bool True if valid, false otherwise.
+ */
+function fasp_verify_ajax_nonce() {
+    // Check nonce if provided
+    if (check_ajax_referer('fasp_ajax', 'fasp_ajax_nonce', false)) {
+        return true;
+    }
+
+    // Fallback: allow authenticated users without nonce
+    if (is_user_logged_in() && current_user_can('read')) {
+        return true;
+    }
+
+    return false;
+}
+
 function fasp_get_amount_currency(){
     $amount = isset($_POST['amount']) ? floatval($_POST['amount']) : 0;
-    $currency = isset($_POST['currency']) ? sanitize_text_field($_POST['currency']) : 'USD';
-    if ($amount <= 0) fasp_json(['ok'=>false,'error'=>'Invalid amount'], 400);
-    return [$amount, strtoupper($currency)];
+    $currency = isset($_POST['currency']) ? strtoupper(sanitize_text_field($_POST['currency'])) : 'USD';
+
+    // Validate amount bounds
+    if ($amount <= 0) {
+        fasp_json(array('ok' => false, 'error' => 'Invalid amount: must be greater than 0'), 400);
+    }
+    if ($amount > 100000) {
+        fasp_json(array('ok' => false, 'error' => 'Invalid amount: exceeds maximum allowed'), 400);
+    }
+
+    // Validate currency whitelist
+    if (!in_array($currency, FASP_ALLOWED_CURRENCIES, true)) {
+        fasp_json(array('ok' => false, 'error' => 'Unsupported currency'), 400);
+    }
+
+    return array($amount, $currency);
 }
 
 add_action('wp_ajax_nopriv_fasp_create_checkout', 'fasp_create_checkout');
 add_action('wp_ajax_fasp_create_checkout', 'fasp_create_checkout');
 function fasp_create_checkout(){
+    // Rate limiting
+    if (fasp_check_ajax_rate_limit('checkout')) {
+        fasp_json(array('ok' => false, 'error' => 'Rate limit exceeded. Please try again later.'), 429);
+    }
+
+    // Nonce verification
+    if (!fasp_verify_ajax_nonce()) {
+        fasp_json(array('ok' => false, 'error' => 'Security verification failed'), 403);
+    }
+
     $method = isset($_POST['method']) ? sanitize_text_field($_POST['method']) : '';
     list($amount, $currency) = fasp_get_amount_currency();
     $title = get_bloginfo('name') . ' Order';
     $success = esc_url_raw(isset($_POST['success_url']) ? $_POST['success_url'] : home_url('/?fasp=success'));
     $cancel  = esc_url_raw(isset($_POST['cancel_url'])  ? $_POST['cancel_url']  : home_url('/?fasp=cancel'));
-    $opt = get_option('fasp_payments', []);
+
+    // Get normalized payments config
+    $payments = function_exists('fasp_get_payments') ? fasp_get_payments() : array();
 
     if ($method === 'stripe'){
-        $sk = $opt['stripe']['sk'] ?? '';
-        if (!$sk){ fasp_json(['ok'=>false,'error'=>'Stripe secret missing'], 400); }
+        $sk = $payments['stripe']['sk'] ?? '';
+        if (!$sk){ fasp_json(array('ok' => false, 'error' => 'Payment gateway not configured'), 400); }
         $body = [
             'mode' => 'payment',
             'success_url' => $success,
@@ -47,18 +124,29 @@ function fasp_create_checkout(){
             'body' => $body,
             'timeout' => 25,
         ]);
-        if (is_wp_error($resp)) fasp_json(['ok'=>false,'error'=>$resp->get_error_message()], 500);
+        if (is_wp_error($resp)) {
+            if (function_exists('fasp_log')) {
+                fasp_log('Stripe checkout error: ' . $resp->get_error_message(), 'error');
+            }
+            fasp_json(array('ok' => false, 'error' => 'Payment service temporarily unavailable'), 500);
+        }
         $code = wp_remote_retrieve_response_code($resp);
         $json = json_decode(wp_remote_retrieve_body($resp), true);
-        if ($code >= 200 && $code < 300 && isset($json['url'])){
-            fasp_json(['ok'=>true,'redirect'=>$json['url']]);
+
+        // Log full response for debugging (not exposed to client)
+        if (function_exists('fasp_log')) {
+            fasp_log('Stripe checkout response: HTTP ' . $code, 'info');
         }
-        fasp_json(['ok'=>false,'error'=>'Stripe error', 'details'=>$json], 502);
+
+        if ($code >= 200 && $code < 300 && isset($json['url'])){
+            fasp_json(array('ok' => true, 'redirect' => $json['url']));
+        }
+        fasp_json(array('ok' => false, 'error' => 'Payment initialization failed'), 502);
     }
 
     if ($method === 'flutterwave'){
-        $sk = $opt['flutterwave']['sk'] ?? '';
-        if (!$sk){ fasp_json(['ok'=>false,'error'=>'Flutterwave secret missing'], 400); }
+        $sk = $payments['flutterwave']['secret'] ?? '';
+        if (!$sk){ fasp_json(array('ok' => false, 'error' => 'Payment gateway not configured'), 400); }
         $payload = [
             'tx_ref' => 'fasp_'.wp_generate_uuid4(),
             'amount' => (string) $amount,
@@ -75,18 +163,28 @@ function fasp_create_checkout(){
             'body' => wp_json_encode($payload),
             'timeout' => 25,
         ]);
-        if (is_wp_error($resp)) fasp_json(['ok'=>false,'error'=>$resp->get_error_message()], 500);
+        if (is_wp_error($resp)) {
+            if (function_exists('fasp_log')) {
+                fasp_log('Flutterwave checkout error: ' . $resp->get_error_message(), 'error');
+            }
+            fasp_json(array('ok' => false, 'error' => 'Payment service temporarily unavailable'), 500);
+        }
         $code = wp_remote_retrieve_response_code($resp);
         $json = json_decode(wp_remote_retrieve_body($resp), true);
-        if ($code >= 200 && $code < 300 && isset($json['data']['link'])){
-            fasp_json(['ok'=>true,'redirect'=>$json['data']['link']]);
+
+        if (function_exists('fasp_log')) {
+            fasp_log('Flutterwave checkout response: HTTP ' . $code, 'info');
         }
-        fasp_json(['ok'=>false,'error'=>'Flutterwave error','details'=>$json], 502);
+
+        if ($code >= 200 && $code < 300 && isset($json['data']['link'])){
+            fasp_json(array('ok' => true, 'redirect' => $json['data']['link']));
+        }
+        fasp_json(array('ok' => false, 'error' => 'Payment initialization failed'), 502);
     }
 
     if ($method === 'paystack'){
-        $sk = $opt['paystack']['sk'] ?? '';
-        if (!$sk){ fasp_json(['ok'=>false,'error'=>'Paystack secret missing'], 400); }
+        $sk = $payments['paystack']['secret'] ?? '';
+        if (!$sk){ fasp_json(array('ok' => false, 'error' => 'Payment gateway not configured'), 400); }
         $email = sanitize_email($_POST['email'] ?? get_option('admin_email'));
         $payload = [
             'email' => $email,
@@ -100,24 +198,46 @@ function fasp_create_checkout(){
             'body' => wp_json_encode($payload),
             'timeout' => 25,
         ]);
-        if (is_wp_error($resp)) fasp_json(['ok'=>false,'error'=>$resp->get_error_message()], 500);
+        if (is_wp_error($resp)) {
+            if (function_exists('fasp_log')) {
+                fasp_log('Paystack checkout error: ' . $resp->get_error_message(), 'error');
+            }
+            fasp_json(array('ok' => false, 'error' => 'Payment service temporarily unavailable'), 500);
+        }
         $code = wp_remote_retrieve_response_code($resp);
         $json = json_decode(wp_remote_retrieve_body($resp), true);
-        if ($code >= 200 && $code < 300 && !empty($json['data']['authorization_url'])){
-            fasp_json(['ok'=>true,'redirect'=>$json['data']['authorization_url']]);
+
+        if (function_exists('fasp_log')) {
+            fasp_log('Paystack checkout response: HTTP ' . $code, 'info');
         }
-        fasp_json(['ok'=>false,'error'=>'Paystack error','details'=>$json], 502);
+
+        if ($code >= 200 && $code < 300 && !empty($json['data']['authorization_url'])){
+            fasp_json(array('ok' => true, 'redirect' => $json['data']['authorization_url']));
+        }
+        fasp_json(array('ok' => false, 'error' => 'Payment initialization failed'), 502);
     }
 
-    fasp_json(['ok'=>false,'error'=>'Unsupported method'], 400);
+    fasp_json(array('ok' => false, 'error' => 'Unsupported payment method'), 400);
 }
 
 /** M-Pesa STK Push */
 add_action('wp_ajax_nopriv_fasp_mpesa_push', 'fasp_mpesa_push');
 add_action('wp_ajax_fasp_mpesa_push', 'fasp_mpesa_push');
 function fasp_mpesa_push(){
-    $opt = get_option('fasp_payments', []);
-    $mpesa = $opt['mpesa'] ?? [];
+    // Rate limiting
+    if (fasp_check_ajax_rate_limit('mpesa')) {
+        fasp_json(array('ok' => false, 'error' => 'Rate limit exceeded. Please try again later.'), 429);
+    }
+
+    // Nonce verification
+    if (!fasp_verify_ajax_nonce()) {
+        fasp_json(array('ok' => false, 'error' => 'Security verification failed'), 403);
+    }
+
+    // Get normalized payments config
+    $payments = function_exists('fasp_get_payments') ? fasp_get_payments() : array();
+    $mpesa = $payments['mpesa'] ?? array();
+
     $env = ($mpesa['env'] ?? 'sandbox') === 'live' ? 'live' : 'sandbox';
     $base = $env === 'live' ? 'https://api.safaricom.co.ke' : 'https://sandbox.safaricom.co.ke';
 
@@ -125,22 +245,31 @@ function fasp_mpesa_push(){
     list($amount, $currency) = fasp_get_amount_currency();
     if (strtoupper($currency) !== 'KES'){
         // STK push is KES-only
-        fasp_json(['ok'=>false,'error'=>'M-Pesa only supports KES'], 400);
+        fasp_json(array('ok' => false, 'error' => 'M-Pesa only supports KES currency'), 400);
     }
     // Normalize phone to 2547XXXXXXXX
     $phone = preg_replace('/\D+/', '', $phone);
     if (strpos($phone, '0') === 0) $phone = '254' . substr($phone,1);
     if (strpos($phone, '254') !== 0) $phone = '254' . ltrim($phone, '0');
 
-    $shortcode = $mpesa['shortcode'] ?? ($mpesa['till'] ?? '');
+    // Validate phone format
+    if (!preg_match('/^254[0-9]{9}$/', $phone)) {
+        fasp_json(array('ok' => false, 'error' => 'Invalid phone number format'), 400);
+    }
+
+    $shortcode = $mpesa['till'] ?? ($mpesa['paybill'] ?? '');
     $passkey   = $mpesa['passkey'] ?? '';
-    $account   = $mpesa['account'] ?? 'FASP';
     $consumer_key = $mpesa['consumer_key'] ?? '';
     $consumer_secret = $mpesa['consumer_secret'] ?? '';
-    $mode = $mpesa['mode'] ?? 'till'; // till|paybill|both
+
+    // Determine mode and account from legacy flat keys if needed
+    $opt = get_option('fasp_payments', array());
+    $mode = $opt['mpesa_mode'] ?? 'till';
+    // Use configured account reference, fallback to site name or FASP
+    $account = !empty($opt['mpesa_account']) ? $opt['mpesa_account'] : (get_bloginfo('name') ?: 'FASP');
 
     if (!$consumer_key || !$consumer_secret || !$shortcode || !$passkey){
-        fasp_json(['ok'=>false,'error'=>'M-Pesa credentials missing'], 400);
+        fasp_json(array('ok' => false, 'error' => 'M-Pesa not properly configured'), 400);
     }
 
     // Access token
@@ -148,10 +277,20 @@ function fasp_mpesa_push(){
         'headers' => ['Authorization' => 'Basic '. base64_encode($consumer_key.':'.$consumer_secret) ],
         'timeout' => 20,
     ]);
-    if (is_wp_error($resp)) fasp_json(['ok'=>false,'error'=>$resp->get_error_message()], 500);
+    if (is_wp_error($resp)) {
+        if (function_exists('fasp_log')) {
+            fasp_log('M-Pesa token error: ' . $resp->get_error_message(), 'error');
+        }
+        fasp_json(array('ok' => false, 'error' => 'Payment service temporarily unavailable'), 500);
+    }
     $tok = json_decode(wp_remote_retrieve_body($resp), true);
     $token = $tok['access_token'] ?? '';
-    if (!$token) fasp_json(['ok'=>false,'error'=>'Failed to get token','details'=>$tok], 502);
+    if (!$token) {
+        if (function_exists('fasp_log')) {
+            fasp_log('M-Pesa token response: ' . wp_json_encode($tok), 'error');
+        }
+        fasp_json(array('ok' => false, 'error' => 'Payment authorization failed'), 502);
+    }
 
     $timestamp = wp_date('YmdHis', time(), new DateTimeZone('Africa/Nairobi'));
     $password = base64_encode($shortcode . $passkey . $timestamp);
@@ -159,6 +298,11 @@ function fasp_mpesa_push(){
     $endpoint = $base . '/mpesa/stkpush/v1/processrequest';
     $transactionType = 'CustomerPayBillOnline';
     if ($mode === 'till') $transactionType = 'CustomerBuyGoodsOnline';
+
+    $callback_url = $mpesa['callback'] ?? '';
+    if (empty($callback_url)) {
+        $callback_url = home_url('/?fasp_webhook=mpesa');
+    }
 
     $payload = [
         'BusinessShortCode' => $shortcode,
@@ -169,7 +313,7 @@ function fasp_mpesa_push(){
         'PartyA' => $phone,
         'PartyB' => $shortcode,
         'PhoneNumber' => $phone,
-        'CallBackURL' => esc_url_raw($mpesa['callback'] ?? home_url('/?fasp_webhook=mpesa')),
+        'CallBackURL' => esc_url_raw($callback_url),
         'AccountReference' => substr($account,0,12),
         'TransactionDesc' => 'FASP Order'
     ];
@@ -179,11 +323,27 @@ function fasp_mpesa_push(){
         'body' => wp_json_encode($payload),
         'timeout' => 25,
     ]);
-    if (is_wp_error($stk)) fasp_json(['ok'=>false,'error'=>$stk->get_error_message()], 500);
+    if (is_wp_error($stk)) {
+        if (function_exists('fasp_log')) {
+            fasp_log('M-Pesa STK push error: ' . $stk->get_error_message(), 'error');
+        }
+        fasp_json(array('ok' => false, 'error' => 'Payment service temporarily unavailable'), 500);
+    }
     $code = wp_remote_retrieve_response_code($stk);
     $json = json_decode(wp_remote_retrieve_body($stk), true);
-    if ($code >= 200 && $code < 300){
-        fasp_json(['ok'=>true,'response'=>$json]);
+
+    if (function_exists('fasp_log')) {
+        fasp_log('M-Pesa STK response: HTTP ' . $code, 'info');
     }
-    fasp_json(['ok'=>false,'error'=>'M-Pesa STK error','details'=>$json], 502);
+
+    if ($code >= 200 && $code < 300){
+        // Return safe response without raw provider details
+        $safe_response = array(
+            'CheckoutRequestID' => sanitize_text_field($json['CheckoutRequestID'] ?? ''),
+            'ResponseCode' => sanitize_text_field($json['ResponseCode'] ?? ''),
+            'ResponseDescription' => sanitize_text_field($json['ResponseDescription'] ?? ''),
+        );
+        fasp_json(array('ok' => true, 'response' => $safe_response));
+    }
+    fasp_json(array('ok' => false, 'error' => 'Payment initialization failed'), 502);
 }

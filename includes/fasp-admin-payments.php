@@ -52,7 +52,21 @@ function fasp_pay_update($data) {
     $clean['mpesa_passkey']  = isset($data['mpesa_passkey']) ? sanitize_text_field($data['mpesa_passkey']) : '';
     $clean['mpesa_initiator']= isset($data['mpesa_initiator']) ? sanitize_text_field($data['mpesa_initiator']) : '';
     $clean['mpesa_ipass']    = isset($data['mpesa_ipass']) ? sanitize_text_field($data['mpesa_ipass']) : '';
-    $clean['mpesa_cert']     = isset($data['mpesa_cert']) ? wp_kses_post($data['mpesa_cert']) : '';
+
+    // M-Pesa PEM certificate - validate PEM format
+    $mpesa_cert = isset($data['mpesa_cert']) ? sanitize_textarea_field($data['mpesa_cert']) : '';
+    $clean['mpesa_cert_valid'] = true;
+    if (!empty($mpesa_cert)) {
+        // Validate PEM markers
+        if (strpos($mpesa_cert, '-----BEGIN') === false || strpos($mpesa_cert, '-----END') === false) {
+            $clean['mpesa_cert_valid'] = false;
+            add_action('admin_notices', function() {
+                echo '<div class="notice notice-error is-dismissible"><p><strong>FASP Payments:</strong> Invalid M-Pesa certificate format. Please ensure the certificate includes valid PEM markers (-----BEGIN ... -----END ...).</p></div>';
+            });
+        }
+    }
+    $clean['mpesa_cert'] = $mpesa_cert;
+
     $env                      = isset($data['mpesa_env']) ? sanitize_text_field($data['mpesa_env']) : 'sandbox';
     $clean['mpesa_env']      = in_array($env, ['sandbox','live'], true) ? $env : 'sandbox';
 
@@ -325,10 +339,10 @@ if (!function_exists('fasp_bridge_sync_payments')) {
     }
     // Hook when the unified option is updated
     add_action('updated_option', function($option, $old_value, $value){
-        if ($option === 'fasp_payments' || $option_name === 'fasp_payments') {
+        if ($option === 'fasp_payments') {
             fasp_bridge_sync_payments($option, $old_value, $value);
         }
-    }, 10, 4);
+    }, 10, 3);
     
     
     
