@@ -20,13 +20,13 @@ add_action('wp_enqueue_scripts', function(){
 });
 
 register_activation_hook(__FILE__, function(){
-  add_rewrite_endpoint('forex-dashboard', EP_ROOT|EP_PAGES);
-  add_rewrite_endpoint('platforms', EP_ROOT|EP_PAGES);
-  add_rewrite_endpoint('resources', EP_ROOT|EP_PAGES);
-  add_rewrite_endpoint('coaches', EP_ROOT|EP_PAGES);
+  // Endpoint registration is now handled by includes/woocommerce-dashboard.php
+  // Just flush rewrite rules on activation to ensure endpoints are registered
   if (function_exists('flush_rewrite_rules')) flush_rewrite_rules();
 });
-register_deactivation_hook(__FILE__, function(){ if (function_exists('flush_rewrite_rules')) flush_rewrite_rules(); });
+register_deactivation_hook(__FILE__, function(){ 
+  if (function_exists('flush_rewrite_rules')) flush_rewrite_rules(); 
+});
 
 require_once FASP_PATH.'includes/helpers.php';
 require_once FASP_PATH.'includes/admin.php';
@@ -60,6 +60,7 @@ require_once FASP_PATH.'includes/anti-fraud.php';
 require_once FASP_PATH.'includes/seo.php';
 require_once FASP_PATH.'includes/email-integration.php';
 require_once FASP_PATH.'includes/onboarding.php';
+require_once FASP_PATH.'includes/dashboard-helpers.php';
 
 require_once FASP_PATH.'includes/cta-frontend.php';
 require_once FASP_PATH.'includes/dashboard.php';

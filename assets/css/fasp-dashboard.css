@@ -354,3 +354,140 @@
   margin-top: 20px;
   text-align: center;
 }
+
+/* Onboarding Checklist */
+.fasp-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+}
+
+.fasp-checklist li {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.fasp-checklist li:last-child {
+  border-bottom: none;
+}
+
+.fasp-checklist .fasp-checked::before {
+  content: '✅ ';
+  margin-right: 8px;
+}
+
+.fasp-checklist .fasp-unchecked::before {
+  content: '⬜ ';
+  margin-right: 8px;
+}
+
+/* Performance Grid */
+.fasp-performance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.fasp-performance-card {
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.fasp-performance-card h3 {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  color: #606060;
+}
+
+.fasp-stat-large {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 8px 0;
+  color: #111;
+}
+
+.fasp-stat-small {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.fasp-positive {
+  color: #16a34a;
+}
+
+.fasp-negative {
+  color: #dc2626;
+}
+
+.fasp-demo {
+  border-left: 3px solid #3b82f6;
+}
+
+.fasp-live {
+  border-left: 3px solid #16a34a;
+}
+
+.fasp-upgrade {
+  border-left: 3px solid #f59e0b;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Stats Grid (for Affiliate Dashboard) */
+.fasp-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.fasp-stat-box {
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  text-align: center;
+}
+
+.fasp-stat-box .fasp-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 4px;
+}
+
+.fasp-stat-box .fasp-stat-label {
+  font-size: 0.85rem;
+  color: #606060;
+}
+
+.fasp-stat-highlight {
+  border-color: #3b82f6;
+  border-width: 2px;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.fasp-stat-highlight .fasp-stat-value {
+  color: #3b82f6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .fasp-performance-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .fasp-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .fasp-stat-large {
+    font-size: 1.5rem;
+  }
+}
