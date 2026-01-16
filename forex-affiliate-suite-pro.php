@@ -135,6 +135,8 @@ require_once __DIR__ . '/includes/resource-template-loader.php';
 require_once __DIR__ . '/includes/admin-gads-offline.php';
 require_once __DIR__ . '/includes/admin-creatives-lab.php';
 require_once __DIR__ . '/includes/consent-soft.php';
+
+require_once __DIR__ . '/includes/conversion-client.php';
 // Payments admin loader — prefer unified file, fall back to legacy shim if present.
 $__pay_files = [
     __DIR__ . '/includes/fasp-admin-payments.php',   // unified
