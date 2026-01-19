@@ -135,6 +135,14 @@ require_once __DIR__ . '/includes/resource-template-loader.php';
 require_once __DIR__ . '/includes/admin-gads-offline.php';
 require_once __DIR__ . '/includes/admin-creatives-lab.php';
 require_once __DIR__ . '/includes/consent-soft.php';
+
+require_once __DIR__ . '/includes/conversion-client.php';
+// if ! grep -q "marketing-secrets.php" forex-affiliate-suite-pro.php; then
+//   awk '1;/conversion-client.php/ { print "require_once __DIR__ . \x27/includes/marketing-secrets.php\x27;"; print "require_once __DIR__ . \x27/includes/admin-marketing-tools.php\x27;"}' forex-affiliate-suite-pro.php > /tmp/fa.tmp && mv /tmp/fa.tmp forex-affiliate-suite-pro.php
+// fi
+
+require_once __DIR__ . '/includes/marketing-secrets.php';
+require_once __DIR__ . '/includes/admin-marketing-tools.php';
 // Payments admin loader — prefer unified file, fall back to legacy shim if present.
 $__pay_files = [
     __DIR__ . '/includes/fasp-admin-payments.php',   // unified

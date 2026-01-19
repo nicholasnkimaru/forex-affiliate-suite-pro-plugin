@@ -5,6 +5,14 @@
 if (!defined('ABSPATH')) exit;
 
 /**
+ * Load conversion client if present (provides fasp_forward_event_to_conversion_service, queue, worker)
+ * This is idempotent and safe if the file doesn't exist yet.
+ */
+if ( file_exists( __DIR__ . '/conversion-client.php' ) ) {
+    require_once __DIR__ . '/conversion-client.php';
+}
+
+/**
  * Capture common ad params into cookies/user meta:
  * - gclid (Google Ads), fbclid, utm_* and a creative "angle"
  */
@@ -61,11 +69,12 @@ if (!function_exists('fasp_mark_verified')) {
         $slug    = sanitize_title($platform_slug);
         if (!$user_id || !$slug) return;
 
+        // Record verification flags and timestamp
         update_user_meta($user_id, '_fasp_verified_' . $slug, '1');
         $now = current_time('mysql', true); // UTC
         update_user_meta($user_id, '_fasp_verified_at', $now);
 
-        // carry across cookies if present
+        // carry across cookies if present (gclid, angle, utm campaign)
         $carry = array(
             'fasp_gclid'         => '_fasp_gclid',
             'fasp_variant_angle' => '_fasp_variant_angle',
@@ -75,6 +84,34 @@ if (!function_exists('fasp_mark_verified')) {
             if (!empty($_COOKIE[$cookie])) {
                 update_user_meta($user_id, $meta, sanitize_text_field($_COOKIE[$cookie]));
             }
+        }
+
+        /**
+         * Forward verification event to conversion ingestion service (non-blocking).
+         * If conversion-client is available it will attempt fire-and-forget POST and
+         * enqueue on failure for cron retries.
+         */
+        if ( function_exists( 'fasp_forward_event_to_conversion_service' ) ) {
+            $gclid = get_user_meta( $user_id, '_fasp_gclid', true ) ?: ( !empty($_COOKIE['fasp_gclid']) ? sanitize_text_field($_COOKIE['fasp_gclid']) : '' );
+            $utm_campaign = get_user_meta( $user_id, '_fasp_utm_campaign', true ) ?: ( !empty($_COOKIE['fasp_utm_campaign']) ? sanitize_text_field($_COOKIE['fasp_utm_campaign']) : '' );
+
+            $event = array(
+                'event_id' => wp_generate_uuid4(),
+                'type' => 'verify',
+                'platform' => $slug,
+                'user_id' => intval( $user_id ),
+                'gclid' => $gclid,
+                'utm' => array(
+                    'utm_campaign' => $utm_campaign,
+                ),
+                'payload' => array(
+                    'verified_at' => $now,
+                ),
+                'received_at' => current_time('mysql', true),
+            );
+
+            // fire-and-forget or enqueue (conversion-client handles enqueueing)
+            fasp_forward_event_to_conversion_service( $event );
         }
     }
 }
@@ -133,6 +170,9 @@ if (!function_exists('fasp_send_complete_registration')) {
          * - fasp_meta_pixel_id
          * - fasp_meta_access_token
          * Keeping this stubbed so it never fatals.
+         *
+         * NOTE: consider using fasp_forward_event_to_conversion_service() instead of direct sending
+         * so events are centrally deduplicated and retried by the conversion ingestion service.
          */
         do_action('fasp/debug', 'capi_payload', $payload);
     }
