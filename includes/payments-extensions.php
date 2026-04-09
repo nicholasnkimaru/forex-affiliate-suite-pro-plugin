@@ -15,7 +15,7 @@ add_action('admin_init', function(){
     $o['paypal_return_url']= esc_url_raw($_POST['paypal_return_url'] ?? home_url('/?fasp_paypal_return=1'));
     $o['paypal_cancel_url']= esc_url_raw($_POST['paypal_cancel_url'] ?? home_url('/?fasp_paypal_cancel=1'));
     $o['mpesa_callback_url']= esc_url_raw($_POST['mpesa_callback_url'] ?? home_url('/?fasp_mpesa_callback=1'));
-    update_option('fasp_payments', array_replace_recursive((array) get_option('fasp_payments', array()), (array) o));
+    update_option('fasp_payments', array_replace_recursive((array) get_option('fasp_payments', array()), (array) $o));
     add_action('admin_notices', function(){ echo '<div class="notice notice-success is-dismissible"><p>Payment settings saved.</p></div>'; });
   }
 });
