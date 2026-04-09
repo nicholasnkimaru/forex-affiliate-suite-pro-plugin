@@ -4,7 +4,7 @@
  * + Creative + Users Verification
  */
 
-function fasp_log($m){ if (class_exists('WC_Logger')){ $l=new WC_Logger(); $l->add('fasp', is_string($m)?$m:wp_json_encode($m)); } }
+if (!function_exists('fasp_log')) { function fasp_log($m){ if (class_exists('WC_Logger')){ $l=new WC_Logger(); $l->add('fasp', is_string($m)?$m:wp_json_encode($m)); } } }
 
 /* ---------------- Platforms store ---------------- */
 function fasp_platforms_get(){ $l=get_option('fasp_platforms', array()); return is_array($l)?$l:array(); }
